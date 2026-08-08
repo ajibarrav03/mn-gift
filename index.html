@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#7a3e52" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="M&N Gift" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>M&N Gift | Control financiero</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="auth-screen" id="authScreen">
+    <div class="auth-card">
+      <img src="logo-mn-gift.png" alt="Logo de M&N Gift" class="auth-logo" />
+      <div class="auth-heading"><h1>M&N Gift</h1><p>Control de negocio · V.MN.0.0.001</p></div>
+      <form id="loginForm" class="auth-form">
+        <label>Correo electrónico<input id="loginEmail" type="email" autocomplete="username" required placeholder="tu@correo.com" /></label>
+        <label>Contraseña<input id="loginPassword" type="password" autocomplete="current-password" required placeholder="••••••••" /></label>
+        <div class="auth-message" id="authMessage" aria-live="polite"></div>
+        <button class="primary-btn full" type="submit" id="loginBtn">Ingresar</button>
+        <button class="link-btn" type="button" id="forgotPasswordBtn">¿Olvidaste tu contraseña?</button>
+      </form>
+      <div class="auth-cloud-note">☁️ Datos protegidos y sincronizados con Supabase</div>
+    </div>
+  </div>
+
+  <div class="app-shell auth-locked" id="appShell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-logo-wrap"><img class="brand-logo" src="logo-mn-gift.png" alt="Logo oficial de M&N Gift" /></div>
+        <div><h1>M&N Gift</h1><p>Control de negocio</p></div>
+      </div>
+      <nav class="nav">
+        <button class="nav-btn active" data-section="dashboard">🏠 <span>Resumen</span></button>
+        <button class="nav-btn" data-section="materials">🎀 <span>Materiales</span></button>
+        <button class="nav-btn" data-section="purchases">📦 <span>Compras</span></button>
+        <button class="nav-btn" data-section="products">🌹 <span>Productos</span></button>
+        <button class="nav-btn" data-section="customers">👥 <span>Clientes</span></button>
+        <button class="nav-btn" data-section="orders">📋 <span>Pedidos</span></button>
+        <button class="nav-btn" data-section="sales">🛒 <span>Ventas</span></button>
+        <button class="nav-btn" data-section="expenses">💸 <span>Gastos</span></button>
+        <button class="nav-btn" data-section="reports">📊 <span>Reportes</span></button>
+        <button class="nav-btn admin-only" id="usersNavBtn" data-section="users" hidden>👑 <span>Usuarios</span></button>
+        <button class="nav-btn" data-section="settings">⚙️ <span>Configuración</span></button>
+      </nav>
+      <div class="sidebar-footer"><small>Moneda: COP 🇨🇴</small><small class="version-tag">V.MN.0.0.001</small></div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button class="menu-btn" id="menuBtn" aria-label="Abrir menú">☰</button>
+        <div><h2 id="pageTitle">Resumen general de M&N Gift</h2><p id="pageSubtitle"></p></div>
+        <div class="topbar-actions">
+          <div class="cloud-badge" id="cloudSyncBadge" title="Estado de sincronización"><span class="cloud-dot"></span><span id="cloudSyncText">Conectando…</span></div>
+          <div class="topbar-badge">COP</div>
+          <div class="user-chip" id="userChip"><span class="user-role-dot"></span><div><strong id="currentUserName">Usuario</strong><small id="currentUserRole">—</small></div></div>
+          <button class="logout-btn" id="logoutBtn" type="button">Salir</button>
+        </div>
+      </header>
+
+      <section class="page-section active" id="dashboard">
+        <article class="daily-quote" aria-live="polite">
+          <div class="quote-icon">✨</div>
+          <div><p id="dailyQuote">“Hoy es un buen día para seguir creciendo.”</p><span id="dailyQuoteAuthor">— M&N Gift</span></div>
+        </article>
+
+        <div class="panel filter-panel dashboard-filter">
+          <div class="filter-label"><strong>Periodo del resumen</strong><span>Filtra ventas, costos, gastos y compras por fecha.</span></div>
+          <label>Desde<input type="date" id="dashboardFrom" /></label>
+          <label>Hasta<input type="date" id="dashboardTo" /></label>
+          <button class="secondary-btn" id="clearDashboardFilter" type="button">Limpiar</button>
+        </div>
+
+        <div class="stats-grid stats-grid-six">
+          <article class="stat-card"><span>Ventas totales</span><strong id="statSales">$ 0</strong><small>COP</small></article>
+          <article class="stat-card"><span>Costo de ventas</span><strong id="statCosts">$ 0</strong><small>COP</small></article>
+          <article class="stat-card"><span>Gastos operativos</span><strong id="statExpenses">$ 0</strong><small>COP</small></article>
+          <article class="stat-card highlight"><span>Ganancia neta</span><strong id="statProfit">$ 0</strong><small>COP</small></article>
+          <article class="stat-card"><span>Compras de materiales</span><strong id="statPurchases">$ 0</strong><small>COP</small></article>
+          <article class="stat-card"><span>Productos vendidos</span><strong id="statUnits">0</strong><small>unidades</small></article>
+        </div>
+
+        <div class="content-grid">
+          <article class="panel">
+            <div class="panel-header"><div><h3>Estado del negocio</h3><p>Rentabilidad e inventario según tus registros.</p></div></div>
+            <div class="dashboard-summary" id="dashboardSummary"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-header"><div><h3>Accesos rápidos</h3><p>Registra los movimientos principales.</p></div></div>
+            <div class="quick-actions">
+              <button data-go="materials">+ Agregar material</button>
+              <button data-go="purchases">+ Reponer material</button>
+              <button data-go="products">+ Crear producto</button>
+              <button data-go="customers">+ Agregar cliente</button>
+              <button data-go="orders">+ Crear pedido</button>
+              <button data-go="sales">+ Registrar venta</button>
+              <button data-go="expenses">+ Registrar gasto</button>
+            </div>
+          </article>
+        </div>
+
+        <article class="panel cash-panel">
+          <div class="panel-header"><div><h3>Flujo de caja simple</h3><p>Entradas por ventas menos compras de materiales y gastos registrados.</p></div></div>
+          <div class="cash-flow-grid">
+            <div><span>Entradas</span><strong id="cashIn">$ 0</strong></div>
+            <div><span>Salidas</span><strong id="cashOut">$ 0</strong></div>
+            <div class="cash-balance"><span>Saldo</span><strong id="cashBalance">$ 0</strong></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="page-section" id="materials">
+        <div class="section-heading">
+          <div><h3>Materiales</h3><p>Registra tus insumos y controla costo unitario, existencia y estado.</p></div>
+          <button class="primary-btn" id="openMaterialModal">+ Nuevo material</button>
+        </div>
+        <div class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Material</th><th>Unidad</th><th>Costo promedio</th><th>Disponible</th><th>Valor inventario</th><th>Estado</th><th>Acciones</th></tr></thead>
+              <tbody id="materialsTable"></tbody>
+            </table>
+          </div>
+          <div class="empty-state small" id="materialsEmpty"><p>No has registrado materiales todavía.</p></div>
+        </div>
+      </section>
+
+      <section class="page-section" id="purchases">
+        <div class="section-heading">
+          <div><h3>Compras y reposición</h3><p>Registra nuevas compras de insumos. El inventario y el costo promedio se actualizan automáticamente.</p></div>
+          <button class="primary-btn" id="openPurchaseModal">+ Registrar compra</button>
+        </div>
+        <div class="filter-bar">
+          <label>Desde<input type="date" id="purchasesFrom" /></label>
+          <label>Hasta<input type="date" id="purchasesTo" /></label>
+          <button class="secondary-btn" type="button" data-clear-filter="purchases">Limpiar filtro</button>
+        </div>
+        <div class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Fecha</th><th>Material</th><th>Cantidad</th><th>Total pagado</th><th>Costo por unidad</th><th>Proveedor / nota</th><th>Acciones</th></tr></thead>
+              <tbody id="purchasesTable"></tbody>
+            </table>
+          </div>
+          <div class="empty-state small" id="purchasesEmpty"><p>No has registrado reposiciones todavía.</p></div>
+        </div>
+      </section>
+
+      <section class="page-section" id="products">
+        <div class="section-heading">
+          <div><h3>Productos</h3><p>Crea cada producto indicando exactamente qué materiales utiliza.</p></div>
+          <button class="primary-btn" id="openProductModal">+ Nuevo producto</button>
+        </div>
+        <div class="cards-list" id="productsList"></div>
+        <div class="panel empty-state" id="productsEmpty"><div class="empty-icon">🌹</div><h4>No hay productos</h4><p>Agrega tu primera rosa, ramo, caja o detalle.</p></div>
+      </section>
+
+
+      <section class="page-section" id="customers">
+        <div class="section-heading">
+          <div><h3>Clientes</h3><p>Guarda los datos de tus clientes para reutilizarlos en futuros pedidos.</p></div>
+          <button class="primary-btn" id="openCustomerModal">+ Nuevo cliente</button>
+        </div>
+        <div class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Cliente</th><th>Teléfono</th><th>Ciudad / zona</th><th>Notas</th><th>Pedidos</th><th>Acciones</th></tr></thead>
+              <tbody id="customersTable"></tbody>
+            </table>
+          </div>
+          <div class="empty-state small" id="customersEmpty"><p>No has registrado clientes todavía.</p></div>
+        </div>
+      </section>
+
+      <section class="page-section" id="orders">
+        <div class="section-heading">
+          <div><h3>Pedidos</h3><p>Controla encargos, fechas de entrega, anticipos, saldos y estado de preparación.</p></div>
+          <button class="primary-btn" id="openOrderModal">+ Nuevo pedido</button>
+        </div>
+        <div class="filter-bar">
+          <label>Entrega desde<input type="date" id="ordersFrom" /></label>
+          <label>Entrega hasta<input type="date" id="ordersTo" /></label>
+          <label>Estado<select id="ordersStatus"><option value="">Todos</option><option>Pendiente</option><option>En elaboración</option><option>Listo</option><option>Entregado</option><option>Cancelado</option></select></label>
+          <button class="secondary-btn" type="button" data-clear-filter="orders">Limpiar filtro</button>
+        </div>
+        <div class="panel order-summary-panel">
+          <div class="cash-flow-grid">
+            <div><span>Pedidos visibles</span><strong id="ordersCount">0</strong></div>
+            <div><span>Total acordado</span><strong id="ordersTotal">$ 0</strong></div>
+            <div class="cash-balance"><span>Saldo por cobrar</span><strong id="ordersBalance">$ 0</strong></div>
+          </div>
+        </div>
+        <div class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Entrega</th><th>Cliente</th><th>Producto</th><th>Cant.</th><th>Total</th><th>Anticipo</th><th>Saldo</th><th>Estado</th><th>Acciones</th></tr></thead>
+              <tbody id="ordersTable"></tbody>
+            </table>
+          </div>
+          <div class="empty-state small" id="ordersEmpty"><p>No has registrado pedidos todavía.</p></div>
+        </div>
+        <p class="section-note">Cuando el pedido esté totalmente pagado, puedes usar <strong>Pasar a venta</strong>. El sistema descontará los materiales, creará la venta y marcará el pedido como Entregado.</p>
+      </section>
+
+      <section class="page-section" id="sales">
+        <div class="section-heading">
+          <div><h3>Ventas</h3><p>Al registrar una venta se descuenta automáticamente el material utilizado.</p></div>
+          <button class="primary-btn" id="openSaleModal">+ Registrar venta</button>
+        </div>
+        <div class="filter-bar">
+          <label>Desde<input type="date" id="salesFrom" /></label>
+          <label>Hasta<input type="date" id="salesTo" /></label>
+          <button class="secondary-btn" type="button" data-clear-filter="sales">Limpiar filtro</button>
+        </div>
+        <div class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Fecha</th><th>Producto</th><th>Cantidad</th><th>Total</th><th>Costo real</th><th>Ganancia bruta</th><th>Acciones</th></tr></thead>
+              <tbody id="salesTable"></tbody>
+            </table>
+          </div>
+          <div class="empty-state small" id="salesEmpty"><p>No has registrado ventas todavía.</p></div>
+        </div>
+      </section>
+
+      <section class="page-section" id="expenses">
+        <div class="section-heading">
+          <div><h3>Gastos</h3><p>Registra publicidad, transporte, domicilios, servicios y otros gastos del negocio.</p></div>
+          <button class="primary-btn" id="openExpenseModal">+ Nuevo gasto</button>
+        </div>
+        <div class="filter-bar">
+          <label>Desde<input type="date" id="expensesFrom" /></label>
+          <label>Hasta<input type="date" id="expensesTo" /></label>
+          <button class="secondary-btn" type="button" data-clear-filter="expenses">Limpiar filtro</button>
+        </div>
+        <div class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Acciones</th></tr></thead>
+              <tbody id="expensesTable"></tbody>
+            </table>
+          </div>
+          <div class="empty-state small" id="expensesEmpty"><p>No has registrado gastos todavía.</p></div>
+        </div>
+      </section>
+
+      <section class="page-section" id="reports">
+        <div class="section-heading">
+          <div><h3>Reportes</h3><p>Analiza ventas, costos y rentabilidad por producto y categoría.</p></div>
+        </div>
+        <div class="filter-bar">
+          <label>Desde<input type="date" id="reportsFrom" /></label>
+          <label>Hasta<input type="date" id="reportsTo" /></label>
+          <button class="secondary-btn" type="button" data-clear-filter="reports">Limpiar filtro</button>
+        </div>
+        <div class="stats-grid report-kpis">
+          <article class="stat-card"><span>Ventas</span><strong id="reportSales">$ 0</strong><small>COP</small></article>
+          <article class="stat-card"><span>Costo de ventas</span><strong id="reportCosts">$ 0</strong><small>COP</small></article>
+          <article class="stat-card highlight"><span>Ganancia bruta</span><strong id="reportGross">$ 0</strong><small>COP</small></article>
+          <article class="stat-card"><span>Ganancia neta</span><strong id="reportNet">$ 0</strong><small>COP</small></article>
+          <article class="stat-card"><span>Margen neto</span><strong id="reportMargin">0%</strong><small>del periodo</small></article>
+        </div>
+        <div class="content-grid report-grid">
+          <article class="panel table-panel">
+            <div class="panel-header"><div><h3>Rentabilidad por producto</h3><p>Productos vendidos en el periodo seleccionado.</p></div></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Producto</th><th>Unidades</th><th>Ventas</th><th>Costos</th><th>Ganancia</th><th>Margen</th></tr></thead>
+                <tbody id="reportProductsTable"></tbody>
+              </table>
+            </div>
+            <div class="empty-state small" id="reportProductsEmpty"><p>No hay ventas en este periodo.</p></div>
+          </article>
+          <article class="panel table-panel">
+            <div class="panel-header"><div><h3>Rentabilidad por categoría</h3><p>Compara qué tipo de productos aporta más al negocio.</p></div></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Categoría</th><th>Unidades</th><th>Ventas</th><th>Ganancia</th></tr></thead>
+                <tbody id="reportCategoriesTable"></tbody>
+              </table>
+            </div>
+            <div class="empty-state small" id="reportCategoriesEmpty"><p>No hay datos para mostrar.</p></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="page-section" id="users">
+        <div class="section-heading">
+          <div><h3>Administración de usuarios</h3><p>Panel exclusivo del Superadmin para controlar el acceso a M&N Gift.</p></div>
+          <div class="section-actions">
+            <button class="secondary-btn" id="refreshUsersBtn" type="button">↻ Actualizar</button>
+            <button class="primary-btn" id="openCreateUserModal" type="button">+ Crear usuario</button>
+          </div>
+        </div>
+        <article class="panel admin-info-panel">
+          <div><strong>👑 Superadmin</strong><p>Desde aquí puedes crear cuentas, cambiar roles, bloquear el inicio de sesión, enviar recuperación, asignar una clave temporal y eliminar usuarios. Las operaciones sensibles se ejecutan mediante una Edge Function segura en Supabase.</p></div>
+        </article>
+        <div class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Usuario</th><th>Rol</th><th>Estado</th><th>Creado</th><th>Último acceso</th><th>Acciones</th></tr></thead>
+              <tbody id="usersTable"></tbody>
+            </table>
+          </div>
+          <div class="empty-state small" id="usersEmpty"><p>No hay usuarios para mostrar.</p></div>
+        </div>
+
+        <article class="panel table-panel admin-audit-panel">
+          <div class="panel-header"><div><h3>Historial administrativo</h3><p>Últimas acciones realizadas por el Superadmin.</p></div></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Fecha</th><th>Acción</th><th>Usuario afectado</th><th>Detalle</th></tr></thead>
+              <tbody id="adminAuditTable"></tbody>
+            </table>
+          </div>
+          <div class="empty-state small" id="adminAuditEmpty"><p>Todavía no hay acciones administrativas registradas.</p></div>
+        </article>
+      </section>
+
+      <section class="page-section" id="settings">
+        <div class="section-heading">
+          <div><h3>Configuración y respaldo</h3><p>Protege tus datos y prepara M&N Gift para usarlo como aplicación.</p></div>
+        </div>
+
+        <article class="panel cloud-panel">
+          <div class="panel-header"><div><h3>☁️ Supabase conectado</h3><p>La sesión y los datos del negocio se sincronizan con la nube.</p></div></div>
+          <div class="cloud-details">
+            <div><span>Proyecto</span><strong>MN-Gift</strong></div>
+            <div><span>Sesión</span><strong id="settingsCloudUser">Comprobando…</strong></div>
+            <div><span>Sincronización</span><strong id="settingsCloudStatus">Comprobando…</strong></div>
+            <div><span>Última sincronización</span><strong id="settingsLastSync">Todavía no</strong></div>
+            <div><span>Cambios pendientes</span><strong id="settingsPendingChanges">No</strong></div>
+            <div><span>Modo de datos</span><strong>Negocio compartido</strong></div>
+            <div><span>Permisos</span><strong id="settingsRoleAccess">Cargando permisos…</strong></div>
+          </div>
+          <div class="settings-actions"><button class="secondary-btn" id="syncNowBtn" type="button">☁ Sincronizar ahora</button><button class="secondary-btn" id="reloadCloudBtn" type="button">↻ Recargar desde la nube</button></div>
+          <p class="section-note">La clave integrada es una Publishable key. Las políticas RLS de Supabase protegen los datos; no se incluye ninguna clave secreta o service_role en la página. Si otra persona modifica información mientras tú trabajas, M&N Gift detendrá la sincronización antes de sobrescribir esos cambios y te pedirá recargar.</p>
+        </article>
+
+        <article class="panel role-access-panel">
+          <div class="panel-header"><div><h3>🔐 Permisos por rol</h3><p>Los permisos se aplican en la página y también mediante políticas RLS en Supabase.</p></div></div>
+          <div class="permission-grid">
+            <div><strong>👑 Superadmin</strong><p>Control total del negocio y administración de usuarios.</p></div>
+            <div><strong>🛠️ Administrador</strong><p>Gestiona materiales, productos, compras, gastos, clientes, pedidos, ventas y reportes. No administra usuarios.</p></div>
+            <div><strong>🧾 Usuario</strong><p>Consulta inventario y productos, registra clientes, pedidos y nuevas ventas. No modifica costos ni elimina historial.</p></div>
+          </div>
+        </article>
+
+        <div class="content-grid settings-grid">
+          <article class="panel">
+            <div class="panel-header"><div><h3>Respaldo de información</h3><p>Descarga una copia completa de materiales, productos, clientes, pedidos, ventas, compras y gastos.</p></div></div>
+            <div class="settings-actions">
+              <button class="primary-btn" id="exportBackupBtn" type="button">⬇ Exportar respaldo</button>
+              <label class="secondary-btn file-btn" for="importBackupInput">⬆ Importar respaldo</label>
+              <input id="importBackupInput" type="file" accept="application/json,.json" hidden />
+            </div>
+            <div class="data-summary" id="dataSummary"></div>
+            <p class="section-note">Guarda el archivo de respaldo fuera del navegador, por ejemplo en tu teléfono, computador o almacenamiento en la nube.</p>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header"><div><h3>Instalar como aplicación</h3><p>Cuando publiques la página con HTTPS podrás instalarla en el teléfono y abrirla como una app.</p></div></div>
+            <div class="install-box">
+              <div class="install-status"><span id="connectionDot" class="connection-dot"></span><div><strong id="connectionStatus">Comprobando conexión…</strong><small id="installHint">Preparando estado de instalación.</small></div></div>
+              <button class="primary-btn" id="installPwaBtn" type="button" disabled>Instalar M&N Gift</button>
+            </div>
+            <p class="section-note">La instalación como app requiere abrir M&N Gift desde un sitio HTTPS, como GitHub Pages. El archivo local seguirá funcionando normalmente.</p>
+          </article>
+        </div>
+
+        <article class="panel danger-zone">
+          <div class="panel-header"><div><h3>Zona de datos</h3><p>Utiliza estas opciones con cuidado.</p></div></div>
+          <div class="danger-row">
+            <div><strong>Borrar todos los datos locales</strong><p>Elimina la información guardada en este navegador. Exporta un respaldo antes.</p></div>
+            <button class="danger-btn" id="resetAllDataBtn" type="button">Borrar datos</button>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="materialModal">
+    <div class="modal">
+      <div class="modal-header"><h3 id="materialModalTitle">Nuevo material</h3><button class="close-modal" data-close="materialModal">×</button></div>
+      <form id="materialForm">
+        <label>Nombre del material<input name="name" required placeholder="Ej: Cinta satinada roja" /></label>
+        <label>Unidad de medida
+          <select name="unit" required>
+            <option value="metro">Metro</option><option value="centímetro">Centímetro</option><option value="gramo">Gramo</option><option value="kilogramo">Kilogramo</option><option value="mililitro">Mililitro</option><option value="litro">Litro</option><option value="unidad">Unidad</option><option value="rollo">Rollo</option><option value="paquete">Paquete</option>
+          </select>
+        </label>
+        <div class="form-grid">
+          <label>Cantidad inicial<input name="quantity" type="number" min="0.0001" step="0.0001" required placeholder="Ej: 20" /></label>
+          <label>Costo total inicial<input name="cost" type="number" min="0" step="1" required placeholder="Ej: 12000" /></label>
+        </div>
+        <small class="form-help">Esta compra inicial crea el material. Las siguientes reposiciones se registran desde “Compras”.</small>
+        <button class="primary-btn full" id="materialSubmitBtn" type="submit">Guardar material</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="purchaseModal">
+    <div class="modal">
+      <div class="modal-header"><h3 id="purchaseModalTitle">Registrar compra de material</h3><button class="close-modal" data-close="purchaseModal">×</button></div>
+      <form id="purchaseForm">
+        <label>Material<select name="materialId" id="purchaseMaterial" required></select></label>
+        <div class="form-grid">
+          <label>Cantidad comprada<input name="quantity" type="number" min="0.0001" step="0.0001" required placeholder="Ej: 50" /></label>
+          <label>Total pagado (COP)<input name="cost" type="number" min="0" step="1" required placeholder="Ej: 30000" /></label>
+        </div>
+        <label>Fecha<input name="date" type="date" required /></label>
+        <label>Proveedor o nota <span class="optional">(opcional)</span><input name="note" placeholder="Ej: Distribuidora Centro" /></label>
+        <div class="purchase-preview" id="purchasePreview">Completa cantidad y costo para ver el costo unitario de esta compra.</div>
+        <button class="primary-btn full" id="purchaseSubmitBtn" type="submit">Guardar compra y aumentar inventario</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="productModal">
+    <div class="modal modal-large">
+      <div class="modal-header"><h3 id="productModalTitle">Nuevo producto</h3><button class="close-modal" data-close="productModal">×</button></div>
+      <form id="productForm">
+        <div class="form-grid">
+          <label>Nombre del producto<input name="name" required placeholder="Ej: Rosa eterna individual" /></label>
+          <label>Categoría<select name="category" id="productCategory" required></select></label>
+        </div>
+        <label id="customCategoryWrap" class="hidden-field">Nueva categoría<input name="customCategory" id="customCategory" placeholder="Ej: Fechas especiales" /></label>
+
+        <section class="recipe-builder">
+          <div class="recipe-heading"><div><h4>Receta de materiales</h4><p>Selecciona un material y escribe cuánto utiliza una unidad del producto.</p></div></div>
+          <div class="recipe-add-row">
+            <label>Material<select id="recipeMaterial"></select></label>
+            <label>Cantidad utilizada<input id="recipeQuantity" type="number" min="0.0001" step="0.0001" placeholder="Ej: 2.5" /></label>
+            <button type="button" class="secondary-btn" id="addRecipeMaterial">+ Agregar</button>
+          </div>
+          <div id="recipeEmpty" class="recipe-empty">Todavía no agregaste materiales a este producto.</div>
+          <div class="recipe-list" id="recipeList"></div>
+          <div class="recipe-total"><span>Costo de materiales</span><strong id="recipeMaterialsCost">$ 0</strong></div>
+        </section>
+
+        <div class="form-grid three">
+          <label>Mano de obra (COP)<input name="laborCost" id="laborCost" type="number" min="0" step="1" value="0" /></label>
+          <label>Empaque / adicionales (COP)<input name="extraCost" id="extraCost" type="number" min="0" step="1" value="0" /></label>
+          <label>Margen deseado (%)<input name="targetMargin" id="targetMargin" type="number" min="0" max="95" step="1" value="40" /></label>
+        </div>
+
+        <div class="cost-preview">
+          <div><span>Costo real</span><strong id="productRealCost">$ 0</strong></div>
+          <div class="suggested"><span>Precio sugerido</span><strong id="suggestedPrice" title="Haz clic para usar este precio">$ 0</strong></div>
+        </div>
+
+        <label>Precio de venta (COP)<input name="price" id="productPrice" type="number" min="0" step="1" required placeholder="Ej: 12000" /></label>
+        <div class="live-profit" id="liveProfit">Ganancia estimada: $ 0 · Margen: 0%</div>
+        <button class="primary-btn full" id="productSubmitBtn" type="submit">Guardar producto</button>
+      </form>
+    </div>
+  </div>
+
+
+  <div class="modal-backdrop" id="customerModal">
+    <div class="modal">
+      <div class="modal-header"><h3 id="customerModalTitle">Nuevo cliente</h3><button class="close-modal" data-close="customerModal">×</button></div>
+      <form id="customerForm">
+        <label>Nombre del cliente<input name="name" required placeholder="Ej: María Rodríguez" /></label>
+        <div class="form-grid">
+          <label>Teléfono / WhatsApp<input name="phone" placeholder="Ej: 300 123 4567" /></label>
+          <label>Ciudad / zona<input name="location" placeholder="Ej: Medellín" /></label>
+        </div>
+        <label>Notas <span class="optional">(opcional)</span><textarea name="notes" rows="3" placeholder="Ej: Prefiere tonos rosados, entregar en portería"></textarea></label>
+        <button class="primary-btn full" id="customerSubmitBtn" type="submit">Guardar cliente</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="orderModal">
+    <div class="modal modal-large">
+      <div class="modal-header"><h3 id="orderModalTitle">Nuevo pedido</h3><button class="close-modal" data-close="orderModal">×</button></div>
+      <form id="orderForm">
+        <div class="form-grid">
+          <label>Cliente<select name="customerId" id="orderCustomer" required></select></label>
+          <label>Producto<select name="productId" id="orderProduct" required></select></label>
+        </div>
+        <div class="form-grid three">
+          <label>Cantidad<input name="quantity" type="number" min="1" step="1" value="1" required /></label>
+          <label>Fecha del pedido<input name="orderDate" type="date" required /></label>
+          <label>Fecha de entrega<input name="deliveryDate" type="date" required /></label>
+        </div>
+        <div class="form-grid">
+          <label>Total acordado (COP)<input name="total" id="orderTotalInput" type="number" min="0" step="1" required /></label>
+          <label>Anticipo recibido (COP)<input name="deposit" id="orderDepositInput" type="number" min="0" step="1" value="0" required /></label>
+        </div>
+        <div class="order-money-preview" id="orderMoneyPreview">Saldo pendiente: $ 0</div>
+        <label>Estado<select name="status" required><option>Pendiente</option><option>En elaboración</option><option>Listo</option><option>Entregado</option><option>Cancelado</option></select></label>
+        <label>Detalles del pedido <span class="optional">(opcional)</span><textarea name="notes" rows="3" placeholder="Ej: 12 rosas rojas, tarjeta con mensaje..." ></textarea></label>
+        <button class="primary-btn full" id="orderSubmitBtn" type="submit">Guardar pedido</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="saleModal">
+    <div class="modal">
+      <div class="modal-header"><h3 id="saleModalTitle">Registrar venta</h3><button class="close-modal" data-close="saleModal">×</button></div>
+      <form id="saleForm">
+        <label>Producto<select name="productId" id="saleProduct" required></select></label>
+        <div class="form-grid">
+          <label>Cantidad<input name="quantity" type="number" min="1" step="1" value="1" required /></label>
+          <label>Fecha<input name="date" type="date" required /></label>
+        </div>
+        <div class="sale-preview" id="salePreview"></div>
+        <button class="primary-btn full" id="saleSubmitBtn" type="submit">Guardar venta y descontar materiales</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="expenseModal">
+    <div class="modal">
+      <div class="modal-header"><h3 id="expenseModalTitle">Registrar gasto</h3><button class="close-modal" data-close="expenseModal">×</button></div>
+      <form id="expenseForm">
+        <label>Categoría
+          <select name="category" required>
+            <option value="Publicidad">Publicidad</option>
+            <option value="Transporte">Transporte</option>
+            <option value="Domicilios">Domicilios</option>
+            <option value="Servicios">Servicios</option>
+            <option value="Herramientas">Herramientas</option>
+            <option value="Comisiones">Comisiones</option>
+            <option value="Empaque general">Empaque general</option>
+            <option value="Otros">Otros</option>
+          </select>
+        </label>
+        <label>Descripción<input name="description" required placeholder="Ej: Publicidad en Instagram" /></label>
+        <div class="form-grid">
+          <label>Monto (COP)<input name="amount" type="number" min="0" step="1" required placeholder="Ej: 25000" /></label>
+          <label>Fecha<input name="date" type="date" required /></label>
+        </div>
+        <button class="primary-btn full" id="expenseSubmitBtn" type="submit">Guardar gasto</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="createUserModal">
+    <div class="modal">
+      <div class="modal-header"><h3>Crear usuario</h3><button class="close-modal" data-close="createUserModal">×</button></div>
+      <form id="createUserForm">
+        <label>Nombre completo <span class="optional">(opcional)</span><input id="createUserName" name="fullName" autocomplete="name" placeholder="Ej: María Rodríguez" /></label>
+        <label>Correo electrónico<input id="createUserEmail" name="email" type="email" autocomplete="off" required placeholder="usuario@correo.com" /></label>
+        <label>Rol<select id="createUserRole" name="role" required><option value="user">Usuario</option><option value="admin">Administrador</option></select></label>
+        <label>Contraseña temporal
+          <div class="password-inline"><input id="createUserPassword" name="password" type="text" minlength="8" autocomplete="off" required placeholder="Mínimo 8 caracteres" /><button class="secondary-btn compact" id="generateCreatePassword" type="button">Generar</button></div>
+        </label>
+        <label class="check-row"><input id="createUserForceChange" type="checkbox" checked /> <span>Obligar al usuario a cambiar esta contraseña al iniciar sesión.</span></label>
+        <div class="auth-message" id="createUserMessage"></div>
+        <button class="primary-btn full" id="createUserSubmit" type="submit">Crear usuario</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="tempPasswordModal">
+    <div class="modal">
+      <div class="modal-header"><h3>Asignar contraseña temporal</h3><button class="close-modal" data-close="tempPasswordModal">×</button></div>
+      <form id="tempPasswordForm">
+        <input id="tempPasswordUserId" type="hidden" />
+        <div class="admin-target" id="tempPasswordTarget"></div>
+        <label>Nueva contraseña temporal
+          <div class="password-inline"><input id="tempPasswordValue" type="text" minlength="8" autocomplete="off" required /><button class="secondary-btn compact" id="generateTempPassword" type="button">Generar</button></div>
+        </label>
+        <label class="check-row"><input id="tempPasswordForceChange" type="checkbox" checked /> <span>Obligar a cambiarla en el próximo inicio de sesión.</span></label>
+        <div class="auth-message" id="tempPasswordMessage"></div>
+        <button class="primary-btn full" type="submit">Guardar contraseña temporal</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="passwordRecoveryModal">
+    <div class="modal">
+      <div class="modal-header"><h3>Crear nueva contraseña</h3></div>
+      <div class="forced-password-note" id="passwordRecoveryIntro">Escribe y confirma tu nueva contraseña.</div>
+      <form id="passwordRecoveryForm">
+        <label>Nueva contraseña<input id="newPassword" type="password" minlength="8" autocomplete="new-password" required /></label>
+        <label>Repetir contraseña<input id="confirmNewPassword" type="password" minlength="8" autocomplete="new-password" required /></label>
+        <div class="auth-message" id="passwordRecoveryMessage"></div>
+        <button class="primary-btn full" type="submit">Guardar nueva contraseña</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.min.js"></script>
+  <script src="app.js"></script>
+  <script src="cloud.js"></script>
+</body>
+</html>
