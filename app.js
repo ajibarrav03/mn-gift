@@ -49,6 +49,50 @@ function escapeHtml(v){ return String(v ?? '').replace(/[&<>'"]/g,c=>({'&':'&amp
 function formatQty(v){ return num(v).toLocaleString('es-CO',{maximumFractionDigits:4}); }
 function todayISO(){ const d=new Date(); const z=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`; }
 function niceDate(date){ return date?new Date(date+'T12:00:00').toLocaleDateString('es-CO'):'—'; }
+function dateAtNoon(date){ return date?new Date(date+'T12:00:00'):null; }
+function dayDifference(date){
+  const target=dateAtNoon(date); if(!target)return null;
+  const now=new Date(); const today=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12);
+  return Math.round((target-today)/86400000);
+}
+function businessAlerts(){
+  const alerts=[];
+  state.materials.forEach(m=>{
+    const base=Math.max(num(m.totalPurchased),num(m.quantity),1),available=num(m.available),ratio=available/base;
+    if(available<=0) alerts.push({level:'critical',icon:'⛔',title:`${m.name} está agotado`,detail:'No queda existencia disponible.',section:'materials'});
+    else if(ratio<=.2) alerts.push({level:'warning',icon:'🎀',title:`Stock bajo: ${m.name}`,detail:`Quedan ${formatQty(available)} ${m.unit}.`,section:'materials'});
+  });
+  state.orders.filter(o=>['Pendiente','En elaboración','Listo'].includes(o.status)&&o.deliveryDate).forEach(o=>{
+    const days=dayDifference(o.deliveryDate); if(days===null||days>2)return;
+    const customer=getCustomer(o.customerId)?.name||o.customerName||'Cliente';
+    if(days<0) alerts.push({level:'critical',icon:'⏰',title:`Pedido atrasado · ${customer}`,detail:`La entrega era ${niceDate(o.deliveryDate)}.`,section:'orders'});
+    else if(days===0) alerts.push({level:'critical',icon:'📦',title:`Entrega para hoy · ${customer}`,detail:`Pedido ${o.status.toLowerCase()} para entregar hoy.`,section:'orders'});
+    else alerts.push({level:'warning',icon:'📅',title:`Entrega ${days===1?'mañana':`en ${days} días`} · ${customer}`,detail:`Fecha: ${niceDate(o.deliveryDate)}.`,section:'orders'});
+  });
+  const pendingOrders=state.orders.filter(o=>o.status!=='Cancelado'&&Math.max(0,num(o.total)-num(o.deposit))>0);
+  const pendingTotal=pendingOrders.reduce((sum,o)=>sum+Math.max(0,num(o.total)-num(o.deposit)),0);
+  if(pendingOrders.length) alerts.push({level:'info',icon:'💰',title:`${pendingOrders.length} ${pendingOrders.length===1?'pedido tiene':'pedidos tienen'} saldo pendiente`,detail:`Total pendiente por cobrar: ${COP.format(pendingTotal)}.`,section:'orders'});
+  const weight={critical:0,warning:1,info:2};
+  return alerts.sort((a,b)=>weight[a.level]-weight[b.level]);
+}
+function alertCardHtml(a,compact=false){
+  return `<button type="button" class="business-alert-item ${a.level}${compact?' compact':''}" data-alert-section="${a.section}"><span class="business-alert-icon">${a.icon}</span><span class="business-alert-copy"><strong>${escapeHtml(a.title)}</strong><small>${escapeHtml(a.detail)}</small></span><span class="business-alert-arrow">›</span></button>`;
+}
+function renderBusinessAlerts(){
+  const alerts=businessAlerts(),count=alerts.length,badge=document.getElementById('businessAlertsCount'),dashCount=document.getElementById('dashboardAlertsCount'),dash=document.getElementById('dashboardAlertsList'),pop=document.getElementById('businessAlertsPopoverList');
+  if(badge){badge.textContent=count>99?'99+':String(count);badge.hidden=count===0;}
+  if(dashCount)dashCount.textContent=`${count} ${count===1?'alerta':'alertas'}`;
+  const empty='<div class="business-alerts-empty"><span>✓</span><div><strong>Todo bajo control</strong><small>No hay alertas activas en este momento.</small></div></div>';
+  if(dash)dash.innerHTML=count?alerts.slice(0,8).map(a=>alertCardHtml(a)).join(''):empty;
+  if(pop)pop.innerHTML=count?alerts.slice(0,10).map(a=>alertCardHtml(a,true)).join(''):empty;
+}
+function closeBusinessAlerts(){
+  const pop=document.getElementById('businessAlertsPopover'),btn=document.getElementById('businessAlertsBtn');if(pop)pop.hidden=true;if(btn)btn.setAttribute('aria-expanded','false');
+}
+function initSplash(){
+  const splash=document.getElementById('appSplash');if(!splash)return;
+  setTimeout(()=>{splash.classList.add('leaving');setTimeout(()=>splash.remove(),320)},650);
+}
 function getMaterial(id){ return state.materials.find(m=>m.id===id); }
 function getProduct(id){ return state.products.find(p=>p.id===id); }
 function getCustomer(id){ return state.customers.find(c=>c.id===id); }
@@ -213,7 +257,7 @@ function convertOrderToSale(id){
 
 function backupPayload(){
   return {
-    app:'M&N Gift', version:'V.MN.0.0.003', phase:2, currency:'COP', exportedAt:new Date().toISOString(),
+    app:'M&N Gift', version:'V.MN.0.0.004', phase:2, currency:'COP', exportedAt:new Date().toISOString(),
     data:{
       materials:state.materials, products:state.products, sales:state.sales, purchases:state.purchases,
       expenses:state.expenses, customers:state.customers, orders:state.orders, customCategories:state.customCategories
@@ -261,8 +305,9 @@ function updateMobileInstallUI(){
   btn.textContent=deferredInstallPrompt?'Instalar':'Cómo instalar';banner.hidden=!eligible;
 }
 function updateConnectionUI(){
-  const online=navigator.onLine,dot=document.getElementById('connectionDot'),status=document.getElementById('connectionStatus'),hint=document.getElementById('installHint'),installBtn=document.getElementById('installPwaBtn');if(!dot||!status||!hint)return;
+  const online=navigator.onLine,dot=document.getElementById('connectionDot'),status=document.getElementById('connectionStatus'),hint=document.getElementById('installHint'),installBtn=document.getElementById('installPwaBtn'),offlineBanner=document.getElementById('offlineBanner'),offlineText=document.getElementById('offlineBannerText');if(!dot||!status||!hint)return;
   dot.classList.toggle('offline',!online);status.textContent=online?'Con conexión':'Sin conexión';
+  if(offlineBanner){offlineBanner.hidden=online;if(!online&&offlineText)offlineText.textContent=(typeof cloud!=='undefined'&&cloud.pendingChanges)?'Tienes cambios pendientes. Se enviarán automáticamente a Supabase cuando vuelva Internet.':'Puedes seguir consultando los datos cargados; los nuevos cambios quedarán pendientes hasta recuperar Internet.';}
   if(isStandaloneApp()){hint.textContent='M&N Gift ya está instalada en este dispositivo.';if(installBtn){installBtn.disabled=true;installBtn.textContent='✓ Aplicación instalada';}}
   else if(location.protocol==='file:'){hint.textContent='Modo local: para instalar, abre la versión publicada por HTTPS.';if(installBtn)installBtn.disabled=true;}
   else if(isIOSDevice()){hint.textContent='En iPhone/iPad: abre en Safari, toca Compartir y luego “Agregar a pantalla de inicio”.';if(installBtn){installBtn.disabled=false;installBtn.textContent='Ver cómo instalar';}}
@@ -283,7 +328,7 @@ function initPwa(){
   window.addEventListener('online',updateConnectionUI);window.addEventListener('offline',updateConnectionUI);window.addEventListener('resize',()=>{renderMobileNav();updateMobileInstallUI();});updateConnectionUI();
 }
 
-function renderAll(){ renderDailyQuote();refreshCategoryOptions();renderMaterials();renderPurchases();renderProducts();renderCustomers();renderOrders();renderSales();renderExpenses();renderDashboard();renderReports();refreshPurchaseMaterials();refreshOrderCustomers();refreshOrderProducts();renderDataSummary();enhanceMobileTables();renderMobileNav(); }
+function renderAll(){ renderDailyQuote();refreshCategoryOptions();renderMaterials();renderPurchases();renderProducts();renderCustomers();renderOrders();renderSales();renderExpenses();renderDashboard();renderReports();refreshPurchaseMaterials();refreshOrderCustomers();refreshOrderProducts();renderDataSummary();renderBusinessAlerts();enhanceMobileTables();renderMobileNav(); }
 
 function resetMaterialModal(){ editing.material=null;const f=document.getElementById('materialForm');f.reset();f.elements.quantity.disabled=false;f.elements.cost.disabled=false;document.getElementById('materialModalTitle').textContent='Nuevo material';document.getElementById('materialSubmitBtn').textContent='Guardar material'; }
 function openMaterialEdit(id){ const m=getMaterial(id);if(!m)return;editing.material=id;const f=document.getElementById('materialForm');f.elements.name.value=m.name;f.elements.unit.value=m.unit;f.elements.quantity.value=num(m.available);f.elements.cost.value=Math.round(num(m.available)*materialUnitCost(m));f.elements.quantity.disabled=true;f.elements.cost.disabled=true;document.getElementById('materialModalTitle').textContent='Editar material';document.getElementById('materialSubmitBtn').textContent='Guardar cambios';openModal('materialModal'); }
@@ -302,6 +347,8 @@ function canConsume(consumption){ const missing=[];consumption.forEach(i=>{const
 function consume(consumption){ consumption.forEach(i=>{const m=getMaterial(i.materialId);if(m)m.available=Math.max(0,num(m.available)-num(i.quantity))}); }
 function restore(consumption){ consumption.forEach(i=>{const m=getMaterial(i.materialId);if(m)m.available=num(m.available)+num(i.quantity)}); }
 
+initSplash();
+
 // Navegación, modales y filtros
 document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>goTo(b.dataset.section)));
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>goTo(b.dataset.go)));
@@ -311,6 +358,9 @@ document.getElementById('mobileNavBackdrop')?.addEventListener('click',()=>toggl
 document.getElementById('mobileBottomNav')?.addEventListener('click',e=>{const btn=e.target.closest('.mobile-nav-btn');if(!btn)return;if(btn.dataset.mobileSection)goTo(btn.dataset.mobileSection);else if(btn.dataset.mobileMore)toggleMobileSidebar(true);});
 document.getElementById('mobileInstallBtn')?.addEventListener('click',installPwa);
 document.getElementById('mobileInstallDismiss')?.addEventListener('click',()=>{sessionStorage.setItem('mngifts_install_banner_dismissed','1');updateMobileInstallUI();});
+document.getElementById('businessAlertsBtn')?.addEventListener('click',e=>{e.stopPropagation();const pop=document.getElementById('businessAlertsPopover'),btn=document.getElementById('businessAlertsBtn');if(!pop)return;pop.hidden=!pop.hidden;btn.setAttribute('aria-expanded',pop.hidden?'false':'true');});
+document.getElementById('closeBusinessAlerts')?.addEventListener('click',closeBusinessAlerts);
+document.addEventListener('click',e=>{const item=e.target.closest?.('[data-alert-section]');if(item){goTo(item.dataset.alertSection);closeBusinessAlerts();return}if(!e.target.closest?.('.alerts-control'))closeBusinessAlerts();});
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.close)));
 document.querySelectorAll('.modal-backdrop').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id)}));
 document.getElementById('productCategory').addEventListener('change',toggleCustomCategory);

@@ -15,10 +15,19 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div class="app-splash" id="appSplash" aria-hidden="true">
+    <div class="app-splash-card">
+      <img src="logo-mn-gift.png" alt="" class="app-splash-logo" />
+      <div class="app-splash-spinner" aria-hidden="true"></div>
+      <strong>M&N Gift</strong>
+      <span>Preparando tu negocio…</span>
+    </div>
+  </div>
+
   <div class="auth-screen" id="authScreen">
     <div class="auth-card">
       <img src="logo-mn-gift.png" alt="Logo de M&N Gift" class="auth-logo" />
-      <div class="auth-heading"><h1>M&N Gift</h1><p>Control de negocio · V.MN.0.0.003</p></div>
+      <div class="auth-heading"><h1>M&N Gift</h1><p>Control de negocio · V.MN.0.0.004</p></div>
       <form id="loginForm" class="auth-form">
         <label>Correo electrónico<input id="loginEmail" type="email" autocomplete="username" required placeholder="tu@correo.com" /></label>
         <label>Contraseña<input id="loginPassword" type="password" autocomplete="current-password" required placeholder="••••••••" /></label>
@@ -31,6 +40,10 @@
   </div>
 
   <div class="app-shell auth-locked" id="appShell">
+    <div class="offline-banner" id="offlineBanner" hidden>
+      <span class="offline-banner-icon">☁</span>
+      <div><strong>Estás trabajando sin conexión</strong><small id="offlineBannerText">Los cambios se guardarán en este dispositivo y se enviarán automáticamente al volver Internet.</small></div>
+    </div>
     <aside class="sidebar" id="sidebar">
       <button class="sidebar-mobile-close" id="sidebarCloseBtn" type="button" aria-label="Cerrar menú">×</button>
       <div class="brand">
@@ -50,7 +63,7 @@
         <button class="nav-btn admin-only" id="usersNavBtn" data-section="users" hidden>👑 <span>Usuarios</span></button>
         <button class="nav-btn" data-section="settings">⚙️ <span>Configuración</span></button>
       </nav>
-      <div class="sidebar-footer"><small>Moneda: COP 🇨🇴</small><small class="version-tag">V.MN.0.0.003</small></div>
+      <div class="sidebar-footer"><small>Moneda: COP 🇨🇴</small><small class="version-tag">V.MN.0.0.004</small></div>
     </aside>
 
     <main class="main-content">
@@ -58,6 +71,15 @@
         <button class="menu-btn" id="menuBtn" aria-label="Abrir menú" aria-expanded="false">☰</button>
         <div><h2 id="pageTitle">Resumen general de M&N Gift</h2><p id="pageSubtitle"></p></div>
         <div class="topbar-actions">
+          <div class="alerts-control">
+            <button class="alerts-bell" id="businessAlertsBtn" type="button" aria-label="Alertas del negocio" aria-expanded="false">
+              <span aria-hidden="true">🔔</span><b id="businessAlertsCount" hidden>0</b>
+            </button>
+            <div class="alerts-popover" id="businessAlertsPopover" hidden>
+              <div class="alerts-popover-head"><div><strong>Alertas del negocio</strong><span>Se actualizan automáticamente</span></div><button type="button" id="closeBusinessAlerts" aria-label="Cerrar">×</button></div>
+              <div class="alerts-popover-list" id="businessAlertsPopoverList"></div>
+            </div>
+          </div>
           <div class="cloud-badge" id="cloudSyncBadge" title="Estado de sincronización"><span class="cloud-dot"></span><span id="cloudSyncText">Conectando…</span></div>
           <div class="topbar-badge">COP</div>
           <div class="user-chip" id="userChip"><span class="user-role-dot"></span><div><strong id="currentUserName">Usuario</strong><small id="currentUserRole">—</small></div></div>
@@ -69,6 +91,14 @@
         <article class="daily-quote" aria-live="polite">
           <div class="quote-icon">✨</div>
           <div><p id="dailyQuote">“Hoy es un buen día para seguir creciendo.”</p><span id="dailyQuoteAuthor">— M&N Gift</span></div>
+        </article>
+
+        <article class="panel business-alerts-panel" id="businessAlertsPanel">
+          <div class="panel-header alerts-panel-header">
+            <div><h3>🔔 Alertas del negocio</h3><p>Stock, entregas próximas y saldos que requieren atención.</p></div>
+            <span class="alerts-total-pill" id="dashboardAlertsCount">0 alertas</span>
+          </div>
+          <div class="business-alerts-list" id="dashboardAlertsList"></div>
         </article>
 
         <div class="panel filter-panel dashboard-filter">
