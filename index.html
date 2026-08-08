@@ -17,7 +17,7 @@
   <div class="auth-screen" id="authScreen">
     <div class="auth-card">
       <img src="logo-mn-gift.png" alt="Logo de M&N Gift" class="auth-logo" />
-      <div class="auth-heading"><h1>M&N Gift</h1><p>Control de negocio · V.MN.0.0.001</p></div>
+      <div class="auth-heading"><h1>M&N Gift</h1><p>Control de negocio · V.MN.0.0.002</p></div>
       <form id="loginForm" class="auth-form">
         <label>Correo electrónico<input id="loginEmail" type="email" autocomplete="username" required placeholder="tu@correo.com" /></label>
         <label>Contraseña<input id="loginPassword" type="password" autocomplete="current-password" required placeholder="••••••••" /></label>
@@ -48,7 +48,7 @@
         <button class="nav-btn admin-only" id="usersNavBtn" data-section="users" hidden>👑 <span>Usuarios</span></button>
         <button class="nav-btn" data-section="settings">⚙️ <span>Configuración</span></button>
       </nav>
-      <div class="sidebar-footer"><small>Moneda: COP 🇨🇴</small><small class="version-tag">V.MN.0.0.001</small></div>
+      <div class="sidebar-footer"><small>Moneda: COP 🇨🇴</small><small class="version-tag">V.MN.0.0.002</small></div>
     </aside>
 
     <main class="main-content">
@@ -333,13 +333,14 @@
             <div><span>Proyecto</span><strong>MN-Gift</strong></div>
             <div><span>Sesión</span><strong id="settingsCloudUser">Comprobando…</strong></div>
             <div><span>Sincronización</span><strong id="settingsCloudStatus">Comprobando…</strong></div>
+            <div><span>Sincronización automática</span><strong>Activa</strong></div>
             <div><span>Última sincronización</span><strong id="settingsLastSync">Todavía no</strong></div>
             <div><span>Cambios pendientes</span><strong id="settingsPendingChanges">No</strong></div>
             <div><span>Modo de datos</span><strong>Negocio compartido</strong></div>
             <div><span>Permisos</span><strong id="settingsRoleAccess">Cargando permisos…</strong></div>
           </div>
-          <div class="settings-actions"><button class="secondary-btn" id="syncNowBtn" type="button">☁ Sincronizar ahora</button><button class="secondary-btn" id="reloadCloudBtn" type="button">↻ Recargar desde la nube</button></div>
-          <p class="section-note">La clave integrada es una Publishable key. Las políticas RLS de Supabase protegen los datos; no se incluye ninguna clave secreta o service_role en la página. Si otra persona modifica información mientras tú trabajas, M&N Gift detendrá la sincronización antes de sobrescribir esos cambios y te pedirá recargar.</p>
+          <div class="settings-actions"><button class="secondary-btn" id="syncNowBtn" type="button">☁ Forzar sincronización</button><button class="secondary-btn" id="reloadCloudBtn" type="button">↻ Recargar manualmente</button></div>
+          <p class="section-note">La sincronización es automática: cada cambio se guarda primero en este dispositivo y se envía a Supabase en segundo plano. Si no hay Internet, queda pendiente y se enviará al reconectar. M&N Gift también comprueba periódicamente si otro usuario hizo cambios. Los botones anteriores son solo herramientas manuales de recuperación.</p>
         </article>
 
         <article class="panel role-access-panel">

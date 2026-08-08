@@ -1,6 +1,6 @@
 /*
   M&N Gift — conexión Supabase
-  Versión de desarrollo: V.MN.0.0.001
+  Versión de desarrollo: V.MN.0.0.002
   Esta clave es PUBLISHABLE y puede vivir en el frontend.
   Nunca incluir service_role o sb_secret_ en este archivo.
 */
@@ -20,7 +20,8 @@ const cloud = {
   lastError: null,
   pendingChanges: false,
   lastRemoteChangeAt: null,
-  retryTimer: null
+  retryTimer: null,
+  autoPullTimer: null
 };
 
 // app.js declara estos objetos/funciones en el mismo contexto global.
@@ -152,7 +153,7 @@ function emergencyLocalSnapshot(label='precloud'){
   try {
     localStorage.setItem(`mngifts_${label}_backup`, JSON.stringify({
       exportedAt: new Date().toISOString(),
-      version: 'V.MN.0.0.001',
+      version: 'V.MN.0.0.002',
       data: {
         materials: state.materials,
         products: state.products,
@@ -203,7 +204,8 @@ async function authenticateSession(session){
 
   await initializeBusinessData();
   cloud.ready = true;
-  setCloudBadge('synced','Sincronizado');
+  startAutomaticCloudRefresh();
+  setCloudBadge('synced','Sincronizado automáticamente');
   updateSyncDetails();
   if (profile.role === 'superadmin') await renderUsersAdmin();
 
@@ -475,7 +477,7 @@ async function syncAllToCloud(force=false){
       cloud.pendingChanges=false;
       localStorage.setItem('mngifts_last_cloud_sync',new Date().toISOString());
       cloud.lastRemoteChangeAt=await getRemoteChangeStamp();
-      setCloudBadge('synced','Sincronizado');
+      setCloudBadge('synced','Sincronizado automáticamente');
       updateSyncDetails();
       return;
     }
@@ -538,7 +540,7 @@ async function syncAllToCloud(force=false){
     cloud.pendingChanges=false;
     localStorage.setItem('mngifts_last_cloud_sync',new Date().toISOString());
     cloud.lastRemoteChangeAt = await getRemoteChangeStamp();
-    setCloudBadge('synced','Sincronizado');
+    setCloudBadge('synced','Sincronizado automáticamente');
     updateSyncDetails();
   }catch(err){
     console.error('Error de sincronización Supabase:',err);
@@ -552,11 +554,40 @@ async function syncAllToCloud(force=false){
   }
 }
 
-function scheduleCloudSync(delay=650){
+function scheduleCloudSync(delay=300){
   if(!cloud.ready) return;
   clearTimeout(cloud.syncTimer);
+  if(navigator.onLine === false){
+    setCloudBadge('error','Sin conexión · cambios pendientes');
+    updateSyncDetails();
+    return;
+  }
   cloud.syncTimer=setTimeout(()=>syncAllToCloud(),delay);
 }
+
+function startAutomaticCloudRefresh(){
+  clearInterval(cloud.autoPullTimer);
+  // Los cambios locales se suben al guardar. Este ciclo solo comprueba
+  // periódicamente si otro dispositivo/usuario publicó cambios nuevos.
+  cloud.autoPullTimer=setInterval(async()=>{
+    if(!cloud.ready || !cloud.session?.user || navigator.onLine===false || cloud.syncing) return;
+    try{
+      const remoteStamp=await getRemoteChangeStamp();
+      if(!remoteStamp) return;
+      if(!cloud.pendingChanges && remoteIsNewer(remoteStamp)){
+        const latest=await fetchCloudBundle();
+        applyCloudBundle(latest);
+        cloud.lastRemoteChangeAt=remoteStamp;
+        localStorage.setItem('mngifts_last_cloud_sync',new Date().toISOString());
+        setCloudBadge('synced','Actualizado automáticamente');
+        updateSyncDetails();
+      }
+    }catch(err){
+      console.warn('Comprobación automática de nube:',err);
+    }
+  },12000);
+}
+
 
 function randomTemporaryPassword(){
   const upper='ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -875,8 +906,6 @@ document.addEventListener('click',e=>{
   if(t?.dataset?.adminDelete) adminDeleteUser(t.dataset.adminDelete,t.dataset.adminEmail);
 });
 
-window.addEventListener('online',()=>{setCloudBadge('syncing','Reconectando…');scheduleCloudSync(100)});
-window.addEventListener('offline',()=>setCloudBadge('error','Sin conexión'));
 window.addEventListener('beforeunload',()=>{ if(cloud.ready) saveLocal(); });
 
 initCloudApp();

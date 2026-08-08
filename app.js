@@ -183,7 +183,7 @@ function convertOrderToSale(id){
 
 function backupPayload(){
   return {
-    app:'M&N Gift', version:'V.MN.0.0.001', phase:2, currency:'COP', exportedAt:new Date().toISOString(),
+    app:'M&N Gift', version:'V.MN.0.0.002', phase:2, currency:'COP', exportedAt:new Date().toISOString(),
     data:{
       materials:state.materials, products:state.products, sales:state.sales, purchases:state.purchases,
       expenses:state.expenses, customers:state.customers, orders:state.orders, customCategories:state.customCategories

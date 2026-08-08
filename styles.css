@@ -58,13 +58,13 @@ td small{color:var(--muted)}
 @media(max-width:620px){.report-kpis{grid-template-columns:1fr}.action-btn.convert{width:100%}}
 
 
-/* ===== V.MN.0.0.001: respaldo e instalación PWA ===== */
+/* ===== V.MN.0.0.002: respaldo e instalación PWA ===== */
 .settings-grid{align-items:stretch}.settings-actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.file-btn{display:inline-flex;align-items:center;justify-content:center;cursor:pointer}.data-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.data-summary>div{background:var(--surface-soft);border-radius:12px;padding:12px}.data-summary span{display:block;color:var(--muted);font-size:12px}.data-summary strong{display:block;margin-top:4px}.data-summary .wide{grid-column:1/-1}.install-box{display:grid;gap:16px;margin-top:18px}.install-status{display:flex;align-items:center;gap:11px;padding:13px;background:var(--surface-soft);border-radius:12px}.install-status strong,.install-status small{display:block}.install-status small{color:var(--muted);margin-top:3px;line-height:1.35}.connection-dot{width:12px;height:12px;border-radius:50%;background:var(--success);box-shadow:0 0 0 4px rgba(45,132,87,.12);flex:0 0 auto}.connection-dot.offline{background:var(--danger);box-shadow:0 0 0 4px rgba(183,63,63,.1)}.danger-zone{margin-top:18px;border-color:#f0caca}.danger-row{display:flex;justify-content:space-between;gap:20px;align-items:center}.danger-row p{margin:5px 0 0;color:var(--muted);font-size:13px}.danger-btn{border:1px solid #efcaca;background:#fff5f5;color:var(--danger);border-radius:12px;padding:11px 14px;font-weight:750}.primary-btn:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:620px){.settings-actions{display:grid}.settings-actions>*{width:100%}.data-summary{grid-template-columns:1fr}.data-summary .wide{grid-column:auto}.danger-row{align-items:stretch;flex-direction:column}.danger-btn{width:100%}}
 
 @media(max-width:760px){.brand-logo-wrap{width:66px;height:76px}}
 
-/* ===== Supabase / autenticación (V.MN.0.0.001 en desarrollo) ===== */
+/* ===== Supabase / autenticación (V.MN.0.0.002 en desarrollo) ===== */
 .auth-locked{display:none!important}
 .auth-screen{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 20% 10%,#fff 0,#fff9fb 34%,#f4e6eb 100%)}
 .auth-screen.hidden{display:none}
@@ -86,7 +86,7 @@ td small{color:var(--muted)}
 .section-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.admin-audit-panel{margin-top:18px}.password-inline{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.secondary-btn.compact{padding:10px 12px;white-space:nowrap}.check-row{display:flex!important;align-items:flex-start;gap:9px;font-size:13px;color:var(--muted);line-height:1.4}.check-row input{width:auto;margin-top:3px}.admin-target{padding:11px 12px;border-radius:11px;background:var(--surface-soft);color:var(--muted);font-size:13px;margin-bottom:12px}.admin-target strong{color:var(--text)}.user-action-stack{display:flex;gap:6px;flex-wrap:wrap}.action-btn.warning{color:var(--warning);background:#fff9ed;border-color:#f0dfb8}.action-btn.danger-solid{color:#fff;background:var(--danger);border-color:var(--danger)}.admin-audit-detail{max-width:360px;white-space:normal;line-height:1.35}.forced-password-note{padding:10px 12px;margin-bottom:12px;border-radius:11px;background:#fff8e8;color:#7a5a20;font-size:13px;line-height:1.45}.modal-backdrop.password-forced .modal{box-shadow:0 0 0 4px rgba(154,106,39,.15),var(--shadow)}
 @media(max-width:620px){.section-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}.password-inline{grid-template-columns:1fr}.secondary-btn.compact{width:100%}.user-action-stack .action-btn{flex:1 1 46%}}
 
-/* Permisos por rol — V.MN.0.0.001 */
+/* Permisos por rol — V.MN.0.0.002 */
 .permission-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.permission-grid>div{padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--surface-soft,#faf8f4)}.permission-grid strong{display:block;margin-bottom:5px}.permission-grid p{margin:0;color:var(--muted);font-size:.9rem;line-height:1.45}.role-access-panel{margin-bottom:18px}@media(max-width:760px){.permission-grid{grid-template-columns:1fr}}
 
 .role-hidden{display:none!important}
