@@ -1,6 +1,6 @@
 /*
   M&N Gift — conexión Supabase
-  Versión de desarrollo: V.MN.0.0.002
+  Versión de desarrollo: V.MN.0.0.003
   Esta clave es PUBLISHABLE y puede vivir en el frontend.
   Nunca incluir service_role o sb_secret_ en este archivo.
 */
@@ -153,7 +153,7 @@ function emergencyLocalSnapshot(label='precloud'){
   try {
     localStorage.setItem(`mngifts_${label}_backup`, JSON.stringify({
       exportedAt: new Date().toISOString(),
-      version: 'V.MN.0.0.002',
+      version: 'V.MN.0.0.003',
       data: {
         materials: state.materials,
         products: state.products,

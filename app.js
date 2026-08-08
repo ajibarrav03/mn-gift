@@ -83,6 +83,35 @@ function currentAppRole(){ try{return cloud?.profile?.role||'user'}catch(_){retu
 function isBusinessAdmin(){ return ['superadmin','admin'].includes(currentAppRole()); }
 function isSuperadmin(){ return currentAppRole()==='superadmin'; }
 function requireBusinessAdmin(message='Esta acción está reservada para Administradores y Superadmin.'){ if(isBusinessAdmin())return true;alert(message);return false; }
+function isMobileViewport(){return window.matchMedia('(max-width:760px)').matches;}
+function isStandaloneApp(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;}
+function isIOSDevice(){return /iphone|ipad|ipod/i.test(navigator.userAgent);}
+const mobileSectionIcons={dashboard:'🏠',materials:'🎀',purchases:'📦',products:'🌹',customers:'👥',orders:'📋',sales:'🛒',expenses:'💸',reports:'📊',users:'👑',settings:'⚙️'};
+function renderMobileNav(){
+  const nav=document.getElementById('mobileBottomNav');if(!nav)return;
+  const primary=currentAppRole()==='user'?['materials','products','orders','sales']:['dashboard','products','orders','sales'];
+  const allowed=primary.filter(roleCanOpenSection);
+  nav.innerHTML=allowed.map(section=>`<button type="button" class="mobile-nav-btn" data-mobile-section="${section}"><b>${mobileSectionIcons[section]||'•'}</b><span>${escapeHtml(titles[section]?.[0]?.replace('Resumen general de M&N Gift','Resumen')||section)}</span></button>`).join('')+`<button type="button" class="mobile-nav-btn" data-mobile-more="1"><b>☰</b><span>Más</span></button>`;
+  const active=document.querySelector('.page-section.active')?.id||'';syncMobileNavActive(active);
+}
+function syncMobileNavActive(section){
+  const nav=document.getElementById('mobileBottomNav');if(!nav)return;
+  const direct=nav.querySelector(`[data-mobile-section="${section}"]`);
+  nav.querySelectorAll('.mobile-nav-btn').forEach(btn=>btn.classList.remove('active'));
+  if(direct)direct.classList.add('active');else nav.querySelector('[data-mobile-more]')?.classList.add('active');
+}
+function toggleMobileSidebar(force){
+  const sidebar=document.getElementById('sidebar'),backdrop=document.getElementById('mobileNavBackdrop'),menu=document.getElementById('menuBtn');if(!sidebar)return;
+  const open=typeof force==='boolean'?force:!sidebar.classList.contains('open');
+  sidebar.classList.toggle('open',open);backdrop?.classList.toggle('visible',open);if(backdrop)backdrop.hidden=!open;
+  document.body.classList.toggle('mobile-menu-open',open);menu?.setAttribute('aria-expanded',open?'true':'false');
+}
+function enhanceMobileTables(){
+  document.querySelectorAll('.table-wrap table').forEach(table=>{
+    const headers=[...table.querySelectorAll('thead th')].map(th=>th.textContent.trim());
+    table.querySelectorAll('tbody tr').forEach(tr=>[...tr.children].forEach((td,i)=>{if(td.tagName==='TD')td.dataset.label=headers[i]||'';}));
+  });
+}
 function roleCanOpenSection(section){ if(currentAppRole()!=='user')return section!=='users'||isSuperadmin();return !['dashboard','purchases','expenses','reports','users'].includes(section); }
 function applyRoleUI(){
   const role=currentAppRole(), user=role==='user';
@@ -99,6 +128,7 @@ function applyRoleUI(){
   const importLabel=document.querySelector('label[for="importBackupInput"]');if(importLabel)importLabel.hidden=user;
   const access=document.getElementById('settingsRoleAccess');
   if(access)access.textContent=role==='superadmin'?'Control total + administración de usuarios':role==='admin'?'Control total del negocio · sin administración de usuarios':'Operación diaria · sin costos, compras, gastos, reportes ni eliminaciones';
+  renderMobileNav();
   const active=document.querySelector('.page-section.active')?.id;
   if(user&&active&&!roleCanOpenSection(active))goTo('orders');
 }
@@ -122,9 +152,9 @@ function saleActions(s){
 }
 
 function renderDailyQuote(){ const start=new Date(new Date().getFullYear(),0,0),day=Math.floor((new Date()-start)/86400000),q=motivationalQuotes[day%motivationalQuotes.length]; document.getElementById('dailyQuote').textContent=`“${q.text}”`;document.getElementById('dailyQuoteAuthor').textContent=`— ${q.author}`; }
-function goTo(section){ if(!roleCanOpenSection(section)){section=currentAppRole()==='user'?'orders':'dashboard'}document.querySelectorAll('.page-section').forEach(el=>el.classList.toggle('active',el.id===section));document.querySelectorAll('.nav-btn').forEach(el=>el.classList.toggle('active',el.dataset.section===section));document.getElementById('pageTitle').textContent=titles[section][0];document.getElementById('pageSubtitle').textContent=titles[section][1];document.getElementById('sidebar').classList.remove('open'); }
-function openModal(id){ document.getElementById(id).classList.add('open'); }
-function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function goTo(section){ if(!roleCanOpenSection(section)){section=currentAppRole()==='user'?'orders':'dashboard'}document.querySelectorAll('.page-section').forEach(el=>el.classList.toggle('active',el.id===section));document.querySelectorAll('.nav-btn').forEach(el=>el.classList.toggle('active',el.dataset.section===section));document.getElementById('pageTitle').textContent=titles[section][0];document.getElementById('pageSubtitle').textContent=titles[section][1];syncMobileNavActive(section);toggleMobileSidebar(false);window.scrollTo({top:0,behavior:'smooth'}); }
+function openModal(id){ document.getElementById(id).classList.add('open');document.body.classList.add('modal-open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open');if(!document.querySelector('.modal-backdrop.open'))document.body.classList.remove('modal-open'); }
 
 function refreshCategoryOptions(){ const s=document.getElementById('productCategory'),selected=s.value,all=[...new Set([...fixedCategories,...state.customCategories])];s.innerHTML='<option value="">Selecciona una categoría</option>'+all.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')+'<option value="__other__">+ Agregar otra categoría</option>';if(all.includes(selected))s.value=selected; }
 function toggleCustomCategory(){ const s=document.getElementById('productCategory'),w=document.getElementById('customCategoryWrap'),i=document.getElementById('customCategory'),other=s.value==='__other__';w.classList.toggle('visible',other);i.required=other;if(!other)i.value=''; }
@@ -183,7 +213,7 @@ function convertOrderToSale(id){
 
 function backupPayload(){
   return {
-    app:'M&N Gift', version:'V.MN.0.0.002', phase:2, currency:'COP', exportedAt:new Date().toISOString(),
+    app:'M&N Gift', version:'V.MN.0.0.003', phase:2, currency:'COP', exportedAt:new Date().toISOString(),
     data:{
       materials:state.materials, products:state.products, sales:state.sales, purchases:state.purchases,
       expenses:state.expenses, customers:state.customers, orders:state.orders, customCategories:state.customCategories
@@ -222,22 +252,38 @@ function clearAllBusinessData(){
   ['materials','products','sales','purchases','expenses','customers','orders','customCategories'].forEach(k=>state[k]=[]);save();renderAll();alert('Los datos locales fueron borrados. Se guardó una copia de emergencia temporal en este navegador.');
 }
 let deferredInstallPrompt=null;
-function updateConnectionUI(){
-  const online=navigator.onLine,dot=document.getElementById('connectionDot'),status=document.getElementById('connectionStatus'),hint=document.getElementById('installHint');if(!dot||!status||!hint)return;
-  dot.classList.toggle('offline',!online);status.textContent=online?'Con conexión':'Sin conexión';
-  if(location.protocol==='file:')hint.textContent='Modo local: para instalar, publica la página en GitHub Pages u otro sitio HTTPS.';
-  else if(deferredInstallPrompt)hint.textContent='La aplicación está lista para instalarse en este dispositivo.';
-  else hint.textContent='M&N Gift puede funcionar sin conexión después de cargarse desde el sitio publicado.';
+function updateMobileInstallUI(){
+  const banner=document.getElementById('mobileInstallBanner'),copy=document.getElementById('mobileInstallText'),btn=document.getElementById('mobileInstallBtn');if(!banner||!copy||!btn)return;
+  const dismissed=sessionStorage.getItem('mngifts_install_banner_dismissed')==='1';
+  const eligible=isMobileViewport()&&location.protocol!=='file:'&&!isStandaloneApp()&&!dismissed;
+  if(isIOSDevice()){copy.textContent='En iPhone: Compartir → Agregar a pantalla de inicio.';btn.textContent='Ver pasos';banner.hidden=!eligible;return;}
+  copy.textContent=deferredInstallPrompt?'Abre M&N Gift como una app desde tu pantalla de inicio.':'Puedes instalarla desde el menú de tu navegador.';
+  btn.textContent=deferredInstallPrompt?'Instalar':'Cómo instalar';banner.hidden=!eligible;
 }
-async function installPwa(){if(!deferredInstallPrompt){alert('La instalación directa todavía no está disponible en este navegador. Si la página está publicada, usa el menú del navegador y selecciona “Instalar aplicación” o “Agregar a pantalla de inicio”.');return}deferredInstallPrompt.prompt();await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;document.getElementById('installPwaBtn').disabled=true;updateConnectionUI();}
+function updateConnectionUI(){
+  const online=navigator.onLine,dot=document.getElementById('connectionDot'),status=document.getElementById('connectionStatus'),hint=document.getElementById('installHint'),installBtn=document.getElementById('installPwaBtn');if(!dot||!status||!hint)return;
+  dot.classList.toggle('offline',!online);status.textContent=online?'Con conexión':'Sin conexión';
+  if(isStandaloneApp()){hint.textContent='M&N Gift ya está instalada en este dispositivo.';if(installBtn){installBtn.disabled=true;installBtn.textContent='✓ Aplicación instalada';}}
+  else if(location.protocol==='file:'){hint.textContent='Modo local: para instalar, abre la versión publicada por HTTPS.';if(installBtn)installBtn.disabled=true;}
+  else if(isIOSDevice()){hint.textContent='En iPhone/iPad: abre en Safari, toca Compartir y luego “Agregar a pantalla de inicio”.';if(installBtn){installBtn.disabled=false;installBtn.textContent='Ver cómo instalar';}}
+  else if(deferredInstallPrompt){hint.textContent='La aplicación está lista para instalarse en este dispositivo.';if(installBtn){installBtn.disabled=false;installBtn.textContent='Instalar M&N Gift';}}
+  else{hint.textContent='Si el navegador no muestra instalación directa, usa su menú y selecciona “Instalar aplicación” o “Agregar a pantalla de inicio”.';if(installBtn){installBtn.disabled=false;installBtn.textContent='Cómo instalar';}}
+  updateMobileInstallUI();
+}
+async function installPwa(){
+  if(isStandaloneApp())return;
+  if(isIOSDevice()){alert('Para instalar M&N Gift en iPhone/iPad:\n\n1. Abre esta página en Safari.\n2. Toca el botón Compartir.\n3. Selecciona “Agregar a pantalla de inicio”.\n4. Confirma con “Agregar”.');return;}
+  if(!deferredInstallPrompt){alert('Abre el menú de tu navegador y selecciona “Instalar aplicación” o “Agregar a pantalla de inicio”. Si esa opción todavía no aparece, vuelve a cargar la página e inténtalo nuevamente.');return;}
+  deferredInstallPrompt.prompt();const choice=await deferredInstallPrompt.userChoice;if(choice?.outcome==='accepted')sessionStorage.setItem('mngifts_install_banner_dismissed','1');deferredInstallPrompt=null;updateConnectionUI();
+}
 function initPwa(){
   if('serviceWorker' in navigator && location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
-  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstallPrompt=e;const b=document.getElementById('installPwaBtn');if(b)b.disabled=false;updateConnectionUI();});
-  window.addEventListener('appinstalled',()=>{deferredInstallPrompt=null;const b=document.getElementById('installPwaBtn');if(b)b.disabled=true;const h=document.getElementById('installHint');if(h)h.textContent='M&N Gift ya está instalada en este dispositivo.';});
-  window.addEventListener('online',updateConnectionUI);window.addEventListener('offline',updateConnectionUI);updateConnectionUI();
+  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstallPrompt=e;updateConnectionUI();});
+  window.addEventListener('appinstalled',()=>{deferredInstallPrompt=null;sessionStorage.setItem('mngifts_install_banner_dismissed','1');updateConnectionUI();});
+  window.addEventListener('online',updateConnectionUI);window.addEventListener('offline',updateConnectionUI);window.addEventListener('resize',()=>{renderMobileNav();updateMobileInstallUI();});updateConnectionUI();
 }
 
-function renderAll(){ renderDailyQuote();refreshCategoryOptions();renderMaterials();renderPurchases();renderProducts();renderCustomers();renderOrders();renderSales();renderExpenses();renderDashboard();renderReports();refreshPurchaseMaterials();refreshOrderCustomers();refreshOrderProducts();renderDataSummary(); }
+function renderAll(){ renderDailyQuote();refreshCategoryOptions();renderMaterials();renderPurchases();renderProducts();renderCustomers();renderOrders();renderSales();renderExpenses();renderDashboard();renderReports();refreshPurchaseMaterials();refreshOrderCustomers();refreshOrderProducts();renderDataSummary();enhanceMobileTables();renderMobileNav(); }
 
 function resetMaterialModal(){ editing.material=null;const f=document.getElementById('materialForm');f.reset();f.elements.quantity.disabled=false;f.elements.cost.disabled=false;document.getElementById('materialModalTitle').textContent='Nuevo material';document.getElementById('materialSubmitBtn').textContent='Guardar material'; }
 function openMaterialEdit(id){ const m=getMaterial(id);if(!m)return;editing.material=id;const f=document.getElementById('materialForm');f.elements.name.value=m.name;f.elements.unit.value=m.unit;f.elements.quantity.value=num(m.available);f.elements.cost.value=Math.round(num(m.available)*materialUnitCost(m));f.elements.quantity.disabled=true;f.elements.cost.disabled=true;document.getElementById('materialModalTitle').textContent='Editar material';document.getElementById('materialSubmitBtn').textContent='Guardar cambios';openModal('materialModal'); }
@@ -259,7 +305,12 @@ function restore(consumption){ consumption.forEach(i=>{const m=getMaterial(i.mat
 // Navegación, modales y filtros
 document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>goTo(b.dataset.section)));
 document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>goTo(b.dataset.go)));
-document.getElementById('menuBtn').addEventListener('click',()=>document.getElementById('sidebar').classList.toggle('open'));
+document.getElementById('menuBtn').addEventListener('click',()=>toggleMobileSidebar());
+document.getElementById('sidebarCloseBtn')?.addEventListener('click',()=>toggleMobileSidebar(false));
+document.getElementById('mobileNavBackdrop')?.addEventListener('click',()=>toggleMobileSidebar(false));
+document.getElementById('mobileBottomNav')?.addEventListener('click',e=>{const btn=e.target.closest('.mobile-nav-btn');if(!btn)return;if(btn.dataset.mobileSection)goTo(btn.dataset.mobileSection);else if(btn.dataset.mobileMore)toggleMobileSidebar(true);});
+document.getElementById('mobileInstallBtn')?.addEventListener('click',installPwa);
+document.getElementById('mobileInstallDismiss')?.addEventListener('click',()=>{sessionStorage.setItem('mngifts_install_banner_dismissed','1');updateMobileInstallUI();});
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.dataset.close)));
 document.querySelectorAll('.modal-backdrop').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id)}));
 document.getElementById('productCategory').addEventListener('change',toggleCustomCategory);
