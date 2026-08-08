@@ -1,6 +1,6 @@
 /*
   M&N Gift — conexión Supabase
-  Versión de desarrollo: V.MN.0.0.004
+  Versión de desarrollo: V.MN.0.0.005
   Esta clave es PUBLISHABLE y puede vivir en el frontend.
   Nunca incluir service_role o sb_secret_ en este archivo.
 */
@@ -66,7 +66,7 @@ function updateSyncDetails(){
 }
 
 const remoteStampTables = [
-  'categories','materials','products','product_materials','purchases','expenses','clients','orders','sales'
+  'categories','suppliers','materials','products','product_materials','purchases','expenses','clients','orders','sales','payments','cash_closures','inventory_movements','production_jobs','production_reservations'
 ];
 
 async function getRemoteChangeStamp(){
@@ -145,7 +145,7 @@ function updateIdentityUI(){
 }
 
 function localBusinessHasData(){
-  return ['materials','products','sales','purchases','expenses','customers','orders','customCategories']
+  return ['materials','products','sales','purchases','expenses','customers','orders','suppliers','inventoryMovements','productionJobs','productionReservations','customCategories']
     .some(k => Array.isArray(state[k]) && state[k].length > 0);
 }
 
@@ -153,7 +153,7 @@ function emergencyLocalSnapshot(label='precloud'){
   try {
     localStorage.setItem(`mngifts_${label}_backup`, JSON.stringify({
       exportedAt: new Date().toISOString(),
-      version: 'V.MN.0.0.004',
+      version: 'V.MN.0.0.005',
       data: {
         materials: state.materials,
         products: state.products,
@@ -162,6 +162,12 @@ function emergencyLocalSnapshot(label='precloud'){
         expenses: state.expenses,
         customers: state.customers,
         orders: state.orders,
+        payments: state.payments,
+        cashClosures: state.cashClosures,
+        suppliers: state.suppliers,
+        inventoryMovements: state.inventoryMovements,
+        productionJobs: state.productionJobs,
+        productionReservations: state.productionReservations,
         customCategories: state.customCategories
       }
     }));
@@ -204,6 +210,7 @@ async function authenticateSession(session){
 
   await initializeBusinessData();
   cloud.ready = true;
+  if(cloud.pendingChanges)scheduleCloudSync(500);
   startAutomaticCloudRefresh();
   setCloudBadge('synced','Sincronizado automáticamente');
   updateSyncDetails();
@@ -222,18 +229,19 @@ async function fetchBusiness(table){
 
 async function fetchCloudBundle(){
   const tables = [
-    'categories','materials','products','product_materials','purchases','expenses',
-    'clients','orders','order_items','sales','sale_items','sale_material_usage'
+    'categories','suppliers','materials','products','product_materials','purchases','expenses',
+    'clients','orders','order_items','sales','sale_items','sale_material_usage','payments','cash_closures','inventory_movements','production_jobs','production_reservations'
   ];
   const values = await Promise.all(tables.map(fetchBusiness));
   return Object.fromEntries(tables.map((t,i)=>[t,values[i]]));
 }
 
 function cloudBundleHasData(b){
-  return ['materials','products','purchases','expenses','clients','orders','sales'].some(k => (b[k]||[]).length);
+  return ['materials','products','purchases','expenses','clients','orders','sales','payments','cash_closures','suppliers','inventory_movements','production_jobs','production_reservations'].some(k => (b[k]||[]).length);
 }
 
 function applyCloudBundle(b){
+  state.suppliers=(b.suppliers||[]).map(x=>({id:x.id,name:x.name,contactName:x.contact_name||'',phone:x.phone||'',city:x.city||'',notes:x.notes||''}));
   const categoryById = new Map((b.categories||[]).map(c=>[c.id,c.name]));
   const materialByIdDb = new Map((b.materials||[]).map(m=>[m.id,m]));
   const purchaseSums = new Map();
@@ -249,6 +257,7 @@ function applyCloudBundle(b){
       quantity:totals.qty, cost:totals.cost,
       available:num(m.stock), avgUnitCost:num(m.average_unit_cost),
       totalPurchased:totals.qty, totalSpent:totals.cost,
+      minimumStock:num(m.minimum_stock), preferredSupplierId:m.preferred_supplier_id||null,
       notes:m.notes||''
     };
   });
@@ -271,9 +280,9 @@ function applyCloudBundle(b){
   const materialUnit = id => materialByIdDb.get(id)?.unit || getMaterial(id)?.unit || '';
   state.purchases = (b.purchases||[]).map(p=>({
     id:p.id, materialId:p.material_id, materialName:materialName(p.material_id), unit:materialUnit(p.material_id),
-    quantity:num(p.quantity), cost:num(p.total_cost), date:p.purchase_date, note:p.notes||p.supplier||''
+    quantity:num(p.quantity), cost:num(p.total_cost), date:p.purchase_date, paymentMethod:p.payment_method||'Otro', supplierId:p.supplier_id||null, note:p.notes||p.supplier||''
   }));
-  state.expenses = (b.expenses||[]).map(x=>({id:x.id,category:x.category,description:x.description,amount:num(x.amount),date:x.expense_date}));
+  state.expenses = (b.expenses||[]).map(x=>({id:x.id,category:x.category,description:x.description,amount:num(x.amount),date:x.expense_date,paymentMethod:x.payment_method||'Otro'}));
 
   state.customers = (b.clients||[]).map(c=>({id:c.id,name:c.name,phone:c.phone||'',location:c.city||'',notes:c.notes||''}));
   const customerMap = new Map(state.customers.map(c=>[c.id,c]));
@@ -307,14 +316,22 @@ function applyCloudBundle(b){
       customerName:customerMap.get(s.client_id)?.name||'', productId:i?.product_id||'',
       productName:i?.product_name||'Producto', productCategory:p?.category||'', quantity:num(i?.quantity||1),
       date:s.sale_date, unitPrice:num(i?.unit_price), total:num(s.total), unitCost:num(i?.unit_cost),
-      cost:num(s.total_cost), consumption:usageBySaleItem.get(i?.id)||[]
+      cost:num(s.total_cost), paymentMethod:s.payment_method||'Otro', consumption:usageBySaleItem.get(i?.id)||[]
     };
   });
 
+  state.payments=(b.payments||[]).map(p=>({id:p.id,orderId:p.order_id||null,saleId:p.sale_id||null,date:p.payment_date,amount:num(p.amount),method:p.method||'Otro',kind:p.kind||'Pago',note:p.notes||''}));
+  state.cashClosures=(b.cash_closures||[]).map(x=>({id:x.id,date:x.closure_date,openingCash:num(x.opening_cash),expectedCash:num(x.expected_cash),countedCash:num(x.counted_cash),difference:num(x.difference),notes:x.notes||'',closedAt:x.closed_at||x.updated_at||x.created_at}));
+  state.inventoryMovements=(b.inventory_movements||[]).map(x=>({id:x.id,materialId:x.material_id||'',materialName:x.material_name||materialName(x.material_id),unit:x.unit||materialUnit(x.material_id),date:x.movement_date,kind:x.movement_type,delta:num(x.quantity_delta),unitCost:num(x.unit_cost),note:x.notes||'',sourceType:x.source_type||'adjustment',sourceId:x.source_id||null,stockAfter:x.stock_after===null?null:num(x.stock_after)}));
+  state.productionJobs=(b.production_jobs||[]).map(x=>({id:x.id,orderId:x.order_id,scheduledDate:x.scheduled_date,status:x.status||'Pendiente',notes:x.notes||'',createdAt:x.created_at,updatedAt:x.updated_at,completedAt:x.completed_at||null}));
+  state.productionReservations=(b.production_reservations||[]).map(x=>({id:x.id,productionJobId:x.production_job_id,orderId:x.order_id,materialId:x.material_id||'',materialName:x.material_name||materialName(x.material_id),unit:x.unit||materialUnit(x.material_id),quantity:num(x.quantity_required),unitCost:num(x.unit_cost)}));
+  state.orders.forEach(o=>{o.deposit=paidAmountForOrder(o)});
+
   const allCategoryNames = (b.categories||[]).map(c=>c.name).filter(Boolean);
   state.customCategories = [...new Set(allCategoryNames.filter(n=>!fixedCategories.includes(n)))];
+  const financeMigrated=migrateFinanceData();
   saveLocal();
-  cloud.pendingChanges = false;
+  cloud.pendingChanges = financeMigrated;
   updateSyncDetails();
   migrateV7();
   renderAll();
@@ -404,7 +421,7 @@ async function syncOperationalUserToCloud(uid){
   cloud.categoryMap=new Map((cats||[]).map(c=>[String(c.name||'').toLowerCase(),c.id]));
 
   const clients=state.customers.map(c=>({id:c.id,user_id:uid,name:c.name,phone:c.phone||null,city:c.location||null,notes:c.notes||null}));
-  const orders=state.orders.map(o=>({id:o.id,user_id:uid,client_id:o.customerId||null,order_date:o.orderDate||todayISO(),delivery_date:o.deliveryDate||null,status:o.status||'Pendiente',total:num(o.total),advance_payment:Math.min(num(o.deposit),num(o.total)),notes:o.notes||null,converted_to_sale:!!o.saleId}));
+  const orders=state.orders.map(o=>({id:o.id,user_id:uid,client_id:o.customerId||null,order_date:o.orderDate||todayISO(),delivery_date:o.deliveryDate||null,status:o.status||'Pendiente',total:num(o.total),advance_payment:Math.min(paidAmountForOrder(o),num(o.total)),notes:o.notes||null,converted_to_sale:!!o.saleId}));
   await upsertRows('clients',clients);
   await upsertRows('orders',orders);
 
@@ -421,7 +438,7 @@ async function syncOperationalUserToCloud(uid){
   const existingSaleIds=new Set((existingSales||[]).map(x=>x.id));
   const newSalesState=state.sales.filter(s=>!existingSaleIds.has(s.id));
   if(newSalesState.length){
-    const sales=newSalesState.map(s=>({id:s.id,user_id:uid,client_id:s.customerId||null,order_id:s.orderId||null,sale_date:s.date||todayISO(),total:num(s.total),total_cost:num(s.cost),payment_method:null,notes:null}));
+    const sales=newSalesState.map(s=>({id:s.id,user_id:uid,client_id:s.customerId||null,order_id:s.orderId||null,sale_date:s.date||todayISO(),total:num(s.total),total_cost:num(s.cost),payment_method:s.paymentMethod||paymentForSale(s.id)?.method||'Otro',notes:null}));
     const {error}=await cloud.client.from('sales').insert(sales);
     if(error) throw new Error(`sales: ${error.message}`);
 
@@ -436,6 +453,23 @@ async function syncOperationalUserToCloud(uid){
       if(usageErr) throw new Error(`sale_material_usage: ${usageErr.message}`);
     }
   }
+  const {data:existingPayments,error:paymentErr}=await cloud.client.from('payments').select('id');
+  if(paymentErr)throw new Error(`payments: ${paymentErr.message}`);
+  const existingPaymentIds=new Set((existingPayments||[]).map(x=>x.id));
+  const newPayments=state.payments.filter(p=>!existingPaymentIds.has(p.id)).map(p=>({id:p.id,user_id:uid,order_id:p.orderId||null,sale_id:p.saleId||null,payment_date:p.date||todayISO(),amount:num(p.amount),method:p.method||'Otro',kind:p.kind||'Pago',notes:p.note||null}));
+  if(newPayments.length){const {error}=await cloud.client.from('payments').insert(newPayments);if(error)throw new Error(`payments: ${error.message}`)}
+  const {data:existingMoves,error:moveErr}=await cloud.client.from('inventory_movements').select('id');
+  if(moveErr)throw new Error(`inventory_movements: ${moveErr.message}`);
+  const existingMoveIds=new Set((existingMoves||[]).map(x=>x.id));
+  const newMoves=state.inventoryMovements.filter(x=>!existingMoveIds.has(x.id)).map(x=>({id:x.id,user_id:uid,material_id:x.materialId||null,material_name:x.materialName||getMaterial(x.materialId)?.name||'Material',unit:x.unit||getMaterial(x.materialId)?.unit||'',movement_date:x.date||todayISO(),movement_type:x.kind||'sale',quantity_delta:num(x.delta),unit_cost:num(x.unitCost),stock_after:x.stockAfter===null||x.stockAfter===undefined?null:num(x.stockAfter),source_type:x.sourceType||'sale',source_id:x.sourceId||null,notes:x.note||null}));
+  if(newMoves.length){const {error}=await cloud.client.from('inventory_movements').insert(newMoves);if(error)throw new Error(`inventory_movements: ${error.message}`)}
+
+  const productionJobs=state.productionJobs.map(j=>({id:j.id,user_id:uid,order_id:j.orderId,scheduled_date:j.scheduledDate||getOrder(j.orderId)?.deliveryDate||todayISO(),status:j.status||'Pendiente',notes:j.notes||null,completed_at:j.completedAt||null}));
+  await upsertRows('production_jobs',productionJobs);
+  const productionReservations=state.productionReservations.map(r=>({id:r.id,user_id:uid,production_job_id:r.productionJobId,order_id:r.orderId||getProductionJob(r.productionJobId)?.orderId,material_id:r.materialId||null,material_name:r.materialName||getMaterial(r.materialId)?.name||'Material',unit:r.unit||getMaterial(r.materialId)?.unit||'',quantity_required:num(r.quantity),unit_cost:num(r.unitCost)}));
+  await upsertRows('production_reservations',productionReservations);
+  await deleteMissing('production_reservations',productionReservations.map(x=>x.id));
+
 }
 
 async function syncAllToCloud(force=false){
@@ -485,15 +519,22 @@ async function syncAllToCloud(force=false){
     const {desiredNames,existing:existingCategories}=await ensureCategories();
     const categoryId = name => cloud.categoryMap.get(String(name||'').toLowerCase()) || null;
 
-    const materials=state.materials.map(m=>({id:m.id,user_id:uid,name:m.name,unit:m.unit,stock:num(m.available),minimum_stock:0,average_unit_cost:materialUnitCost(m),notes:m.notes||null}));
+    const suppliers=state.suppliers.map(x=>({id:x.id,user_id:uid,name:x.name,contact_name:x.contactName||null,phone:x.phone||null,city:x.city||null,notes:x.notes||null}));
+    const materials=state.materials.map(m=>({id:m.id,user_id:uid,name:m.name,unit:m.unit,stock:num(m.available),minimum_stock:num(m.minimumStock),average_unit_cost:materialUnitCost(m),preferred_supplier_id:m.preferredSupplierId||null,notes:m.notes||null}));
     const clients=state.customers.map(c=>({id:c.id,user_id:uid,name:c.name,phone:c.phone||null,city:c.location||null,notes:c.notes||null}));
     const products=state.products.map(p=>({id:p.id,user_id:uid,category_id:categoryId(p.category),name:p.name,labor_cost:num(p.laborCost),packaging_cost:0,other_cost:num(p.extraCost),desired_margin:num(p.targetMargin),sale_price:num(p.price),active:p.active!==false,notes:null}));
-    const orders=state.orders.map(o=>({id:o.id,user_id:uid,client_id:o.customerId||null,order_date:o.orderDate||todayISO(),delivery_date:o.deliveryDate||null,status:o.status||'Pendiente',total:num(o.total),advance_payment:Math.min(num(o.deposit),num(o.total)),notes:o.notes||null,converted_to_sale:!!o.saleId}));
-    const sales=state.sales.map(s=>({id:s.id,user_id:uid,client_id:s.customerId||null,order_id:s.orderId||null,sale_date:s.date||todayISO(),total:num(s.total),total_cost:num(s.cost),payment_method:null,notes:null}));
-    const expenses=state.expenses.map(x=>({id:x.id,user_id:uid,expense_date:x.date||todayISO(),category:x.category,description:x.description,amount:num(x.amount),notes:null}));
-    const purchases=state.purchases.map(x=>({id:x.id,user_id:uid,material_id:x.materialId,purchase_date:x.date||todayISO(),quantity:num(x.quantity),total_cost:num(x.cost),supplier:null,notes:x.note||null}));
+    const orders=state.orders.map(o=>({id:o.id,user_id:uid,client_id:o.customerId||null,order_date:o.orderDate||todayISO(),delivery_date:o.deliveryDate||null,status:o.status||'Pendiente',total:num(o.total),advance_payment:Math.min(paidAmountForOrder(o),num(o.total)),notes:o.notes||null,converted_to_sale:!!o.saleId}));
+    const sales=state.sales.map(s=>({id:s.id,user_id:uid,client_id:s.customerId||null,order_id:s.orderId||null,sale_date:s.date||todayISO(),total:num(s.total),total_cost:num(s.cost),payment_method:s.paymentMethod||paymentForSale(s.id)?.method||'Otro',notes:null}));
+    const expenses=state.expenses.map(x=>({id:x.id,user_id:uid,expense_date:x.date||todayISO(),category:x.category,description:x.description,amount:num(x.amount),payment_method:x.paymentMethod||'Otro',notes:null}));
+    const purchases=state.purchases.map(x=>({id:x.id,user_id:uid,material_id:x.materialId,purchase_date:x.date||todayISO(),quantity:num(x.quantity),total_cost:num(x.cost),payment_method:x.paymentMethod||'Otro',supplier_id:x.supplierId||null,supplier:getSupplier(x.supplierId)?.name||null,notes:x.note||null}));
+    const payments=state.payments.map(p=>({id:p.id,user_id:uid,order_id:p.orderId||null,sale_id:p.saleId||null,payment_date:p.date||todayISO(),amount:num(p.amount),method:p.method||'Otro',kind:p.kind||'Pago',notes:p.note||null}));
+    const cashClosures=state.cashClosures.map(x=>({id:x.id,user_id:uid,closure_date:x.date||todayISO(),opening_cash:num(x.openingCash),expected_cash:num(x.expectedCash),counted_cash:num(x.countedCash),difference:num(x.difference),notes:x.notes||null,closed_at:x.closedAt||new Date().toISOString()}));
+    const inventoryMovements=state.inventoryMovements.map(x=>({id:x.id,user_id:uid,material_id:x.materialId||null,material_name:x.materialName||getMaterial(x.materialId)?.name||'Material',unit:x.unit||getMaterial(x.materialId)?.unit||'',movement_date:x.date||todayISO(),movement_type:x.kind||'adjustment',quantity_delta:num(x.delta),unit_cost:num(x.unitCost),stock_after:x.stockAfter===null||x.stockAfter===undefined?null:num(x.stockAfter),source_type:x.sourceType||'adjustment',source_id:x.sourceId||null,notes:x.note||null}));
+    const productionJobs=state.productionJobs.map(j=>({id:j.id,user_id:uid,order_id:j.orderId,scheduled_date:j.scheduledDate||getOrder(j.orderId)?.deliveryDate||todayISO(),status:j.status||'Pendiente',notes:j.notes||null,completed_at:j.completedAt||null}));
+    const productionReservations=state.productionReservations.map(r=>({id:r.id,user_id:uid,production_job_id:r.productionJobId,order_id:r.orderId||getProductionJob(r.productionJobId)?.orderId,material_id:r.materialId||null,material_name:r.materialName||getMaterial(r.materialId)?.name||'Material',unit:r.unit||getMaterial(r.materialId)?.unit||'',quantity_required:num(r.quantity),unit_cost:num(r.unitCost)}));
 
     // Primero crear/actualizar padres para satisfacer FKs.
+    await upsertRows('suppliers',suppliers);
     await upsertRows('materials',materials);
     await upsertRows('clients',clients);
     await upsertRows('products',products);
@@ -501,6 +542,11 @@ async function syncAllToCloud(force=false){
     await upsertRows('sales',sales);
     await upsertRows('expenses',expenses);
     await upsertRows('purchases',purchases);
+    await upsertRows('payments',payments);
+    await upsertRows('cash_closures',cashClosures);
+    await upsertRows('inventory_movements',inventoryMovements);
+    await upsertRows('production_jobs',productionJobs);
+    await upsertRows('production_reservations',productionReservations);
 
     const recipes=[];
     state.products.forEach(p=>normalizedRecipe(p).forEach(r=>recipes.push({user_id:uid,product_id:p.id,material_id:r.materialId,quantity:num(r.quantity)})));
@@ -521,6 +567,11 @@ async function syncAllToCloud(force=false){
     }
 
     // Eliminar registros que ya no existen localmente (después de actualizar hijos).
+    await deleteMissing('payments',payments.map(x=>x.id));
+    await deleteMissing('cash_closures',cashClosures.map(x=>x.id));
+    await deleteMissing('inventory_movements',inventoryMovements.map(x=>x.id));
+    await deleteMissing('production_reservations',productionReservations.map(x=>x.id));
+    await deleteMissing('production_jobs',productionJobs.map(x=>x.id));
     await deleteMissing('purchases',purchases.map(x=>x.id));
     await deleteMissing('expenses',expenses.map(x=>x.id));
     await deleteMissing('sales',sales.map(x=>x.id));
@@ -528,6 +579,7 @@ async function syncAllToCloud(force=false){
     await deleteMissing('products',products.map(x=>x.id));
     await deleteMissing('clients',clients.map(x=>x.id));
     await deleteMissing('materials',materials.map(x=>x.id));
+    await deleteMissing('suppliers',suppliers.map(x=>x.id));
 
     const desiredLower=new Set(desiredNames.map(x=>String(x).toLowerCase()));
     const removeCats=(existingCategories||[]).filter(c=>!desiredLower.has(String(c.name).toLowerCase())).map(c=>c.id);

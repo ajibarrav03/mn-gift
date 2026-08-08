@@ -27,7 +27,7 @@
   <div class="auth-screen" id="authScreen">
     <div class="auth-card">
       <img src="logo-mn-gift.png" alt="Logo de M&N Gift" class="auth-logo" />
-      <div class="auth-heading"><h1>M&N Gift</h1><p>Control de negocio · V.MN.0.0.004</p></div>
+      <div class="auth-heading"><h1>M&N Gift</h1><p>Control de negocio · V.MN.0.0.005</p></div>
       <form id="loginForm" class="auth-form">
         <label>Correo electrónico<input id="loginEmail" type="email" autocomplete="username" required placeholder="tu@correo.com" /></label>
         <label>Contraseña<input id="loginPassword" type="password" autocomplete="current-password" required placeholder="••••••••" /></label>
@@ -53,17 +53,20 @@
       <nav class="nav">
         <button class="nav-btn active" data-section="dashboard">🏠 <span>Resumen</span></button>
         <button class="nav-btn" data-section="materials">🎀 <span>Materiales</span></button>
+        <button class="nav-btn" data-section="inventory">📚 <span>Inventario</span></button>
         <button class="nav-btn" data-section="purchases">📦 <span>Compras</span></button>
         <button class="nav-btn" data-section="products">🌹 <span>Productos</span></button>
         <button class="nav-btn" data-section="customers">👥 <span>Clientes</span></button>
         <button class="nav-btn" data-section="orders">📋 <span>Pedidos</span></button>
+        <button class="nav-btn" data-section="production">🧰 <span>Producción</span></button>
         <button class="nav-btn" data-section="sales">🛒 <span>Ventas</span></button>
         <button class="nav-btn" data-section="expenses">💸 <span>Gastos</span></button>
         <button class="nav-btn" data-section="reports">📊 <span>Reportes</span></button>
+        <button class="nav-btn" data-section="cash">💵 <span>Caja</span></button>
         <button class="nav-btn admin-only" id="usersNavBtn" data-section="users" hidden>👑 <span>Usuarios</span></button>
         <button class="nav-btn" data-section="settings">⚙️ <span>Configuración</span></button>
       </nav>
-      <div class="sidebar-footer"><small>Moneda: COP 🇨🇴</small><small class="version-tag">V.MN.0.0.004</small></div>
+      <div class="sidebar-footer"><small>Moneda: COP 🇨🇴</small><small class="version-tag">V.MN.0.0.005</small></div>
     </aside>
 
     <main class="main-content">
@@ -154,12 +157,47 @@
         <div class="panel table-panel">
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Material</th><th>Unidad</th><th>Costo promedio</th><th>Disponible</th><th>Valor inventario</th><th>Estado</th><th>Acciones</th></tr></thead>
+              <thead><tr><th>Material</th><th>Unidad</th><th>Costo promedio</th><th>Disponible</th><th>Mínimo</th><th>Valor inventario</th><th>Estado</th><th>Acciones</th></tr></thead>
               <tbody id="materialsTable"></tbody>
             </table>
           </div>
           <div class="empty-state small" id="materialsEmpty"><p>No has registrado materiales todavía.</p></div>
         </div>
+      </section>
+
+      <section class="page-section" id="inventory">
+        <div class="section-heading">
+          <div><h3>Inventario avanzado</h3><p>Trazabilidad de existencias, desperdicios, ajustes, proveedores y reposición.</p></div>
+          <div class="section-actions"><button class="secondary-btn" id="openSupplierModal" type="button">+ Proveedor</button><button class="primary-btn" id="openInventoryAdjustmentModal" type="button">± Ajustar inventario</button></div>
+        </div>
+        <div class="stats-grid inventory-kpis">
+          <article class="stat-card"><span>Valor del inventario</span><strong id="inventoryTotalValue">$ 0</strong><small>COP</small></article>
+          <article class="stat-card"><span>Materiales</span><strong id="inventoryMaterialCount">0</strong><small>registrados</small></article>
+          <article class="stat-card"><span>Stock bajo</span><strong id="inventoryLowCount">0</strong><small>requieren reposición</small></article>
+          <article class="stat-card"><span>Agotados</span><strong id="inventoryOutCount">0</strong><small>sin existencia</small></article>
+        </div>
+        <div class="content-grid inventory-grid">
+          <article class="panel table-panel inventory-movements-panel">
+            <div class="panel-header"><div><h3>Historial de movimientos</h3><p>Cada entrada, venta, pérdida o corrección queda registrada.</p></div></div>
+            <div class="filter-bar inventory-filter-bar">
+              <label>Material<select id="inventoryMovementMaterial"><option value="">Todos</option></select></label>
+              <label>Tipo<select id="inventoryMovementType"><option value="">Todos</option><option>Compra</option><option>Venta</option><option>Pérdida / desperdicio</option><option>Daño</option><option>Uso interno</option><option>Corrección positiva</option><option>Corrección negativa</option><option>Entrada manual</option><option>Reversión de venta</option><option>Reversión de compra</option></select></label>
+              <label>Desde<input type="date" id="inventoryMovementFrom" /></label>
+              <label>Hasta<input type="date" id="inventoryMovementTo" /></label>
+            </div>
+            <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Material</th><th>Movimiento</th><th>Cantidad</th><th>Existencia posterior</th><th>Valor</th><th>Detalle</th></tr></thead><tbody id="inventoryMovementsTable"></tbody></table></div>
+            <div class="empty-state small" id="inventoryMovementsEmpty"><p>No hay movimientos para los filtros seleccionados.</p></div>
+          </article>
+          <article class="panel table-panel suppliers-panel">
+            <div class="panel-header"><div><h3>Proveedores</h3><p>Contactos y materiales asociados.</p></div></div>
+            <div class="table-wrap"><table><thead><tr><th>Proveedor</th><th>Contacto</th><th>Materiales</th><th>Acciones</th></tr></thead><tbody id="suppliersTable"></tbody></table></div>
+            <div class="empty-state small" id="suppliersEmpty"><p>No has registrado proveedores todavía.</p></div>
+          </article>
+        </div>
+        <article class="panel inventory-reorder-panel">
+          <div class="panel-header"><div><h3>Lista de reposición</h3><p>Materiales que llegaron o bajaron de su mínimo configurado.</p></div></div>
+          <div id="inventoryReorderList" class="reorder-list"></div>
+        </article>
       </section>
 
       <section class="page-section" id="purchases">
@@ -175,7 +213,7 @@
         <div class="panel table-panel">
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Fecha</th><th>Material</th><th>Cantidad</th><th>Total pagado</th><th>Costo por unidad</th><th>Proveedor / nota</th><th>Acciones</th></tr></thead>
+              <thead><tr><th>Fecha</th><th>Material</th><th>Cantidad</th><th>Total pagado</th><th>Pago</th><th>Costo por unidad</th><th>Proveedor / nota</th><th>Acciones</th></tr></thead>
               <tbody id="purchasesTable"></tbody>
             </table>
           </div>
@@ -230,13 +268,63 @@
         <div class="panel table-panel">
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Entrega</th><th>Cliente</th><th>Producto</th><th>Cant.</th><th>Total</th><th>Anticipo</th><th>Saldo</th><th>Estado</th><th>Acciones</th></tr></thead>
+              <thead><tr><th>Entrega</th><th>Cliente</th><th>Producto</th><th>Cant.</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th>Acciones</th></tr></thead>
               <tbody id="ordersTable"></tbody>
             </table>
           </div>
           <div class="empty-state small" id="ordersEmpty"><p>No has registrado pedidos todavía.</p></div>
         </div>
         <p class="section-note">Cuando el pedido esté totalmente pagado, puedes usar <strong>Pasar a venta</strong>. El sistema descontará los materiales, creará la venta y marcará el pedido como Entregado.</p>
+      </section>
+
+
+      <section class="page-section" id="production">
+        <div class="section-heading">
+          <div><h3>Producción</h3><p>Planifica lo que debes fabricar, reserva materiales y anticipa faltantes antes de la entrega.</p></div>
+          <button class="secondary-btn" id="productionRefreshBtn" type="button">↻ Actualizar planificación</button>
+        </div>
+
+        <div class="stats-grid production-kpis">
+          <article class="stat-card"><span>Sin planificar</span><strong id="productionUnplannedCount">0</strong><small>pedidos activos</small></article>
+          <article class="stat-card"><span>En producción</span><strong id="productionActiveCount">0</strong><small>planes activos</small></article>
+          <article class="stat-card"><span>Para hoy / atrasados</span><strong id="productionTodayCount">0</strong><small>requieren atención</small></article>
+          <article class="stat-card"><span>Con faltantes</span><strong id="productionShortageCount">0</strong><small>planes afectados</small></article>
+        </div>
+
+        <article class="panel production-today-panel">
+          <div class="panel-header"><div><h3>🧰 Qué debo fabricar hoy</h3><p>Pedidos programados para hoy o que ya están atrasados.</p></div></div>
+          <div class="production-today-list" id="productionTodayList"></div>
+        </article>
+
+        <article class="panel production-calendar-panel">
+          <div class="panel-header"><div><h3>Agenda de los próximos 7 días</h3><p>Vista rápida de producción y fechas programadas.</p></div></div>
+          <div class="production-week" id="productionWeek"></div>
+        </article>
+
+        <div class="filter-bar production-filter-bar">
+          <label>Programado desde<input type="date" id="productionFrom" /></label>
+          <label>Programado hasta<input type="date" id="productionTo" /></label>
+          <label>Estado<select id="productionStatus"><option value="">Todos</option><option value="Sin planificar">Sin planificar</option><option>Pendiente</option><option>Preparando</option><option>Fabricando</option><option>Terminado</option><option>Entregado</option></select></label>
+          <button class="secondary-btn" id="clearProductionFilter" type="button">Limpiar filtro</button>
+        </div>
+
+        <article class="panel table-panel">
+          <div class="panel-header"><div><h3>Plan de producción</h3><p>Cada plan reserva los materiales necesarios sin descontarlos hasta que el pedido pase a venta.</p></div></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Producción</th><th>Entrega</th><th>Cliente</th><th>Producto</th><th>Cant.</th><th>Estado</th><th>Materiales</th><th>Acciones</th></tr></thead>
+            <tbody id="productionTable"></tbody>
+          </table></div>
+          <div class="empty-state small" id="productionEmpty"><p>No hay pedidos para mostrar.</p></div>
+        </article>
+
+        <article class="panel production-needs-panel">
+          <div class="panel-header"><div><h3>Materiales comprometidos</h3><p>Compara el stock físico con lo reservado para todos los pedidos en producción.</p></div></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Material</th><th>Stock físico</th><th>Reservado</th><th>Libre</th><th>Faltante</th><th>Proveedor preferido</th></tr></thead>
+            <tbody id="productionMaterialsTable"></tbody>
+          </table></div>
+          <div class="empty-state small" id="productionMaterialsEmpty"><p>No hay materiales reservados todavía.</p></div>
+        </article>
       </section>
 
       <section class="page-section" id="sales">
@@ -252,7 +340,7 @@
         <div class="panel table-panel">
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Fecha</th><th>Producto</th><th>Cantidad</th><th>Total</th><th>Costo real</th><th>Ganancia bruta</th><th>Acciones</th></tr></thead>
+              <thead><tr><th>Fecha</th><th>Producto</th><th>Cantidad</th><th>Total</th><th>Pago</th><th>Costo real</th><th>Ganancia bruta</th><th>Acciones</th></tr></thead>
               <tbody id="salesTable"></tbody>
             </table>
           </div>
@@ -273,7 +361,7 @@
         <div class="panel table-panel">
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Acciones</th></tr></thead>
+              <thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Pago</th><th>Acciones</th></tr></thead>
               <tbody id="expensesTable"></tbody>
             </table>
           </div>
@@ -283,19 +371,30 @@
 
       <section class="page-section" id="reports">
         <div class="section-heading">
-          <div><h3>Reportes</h3><p>Analiza ventas, costos y rentabilidad por producto y categoría.</p></div>
+          <div><h3>Reportes financieros</h3><p>Analiza ventas, cobros, costos, rentabilidad, medios de pago y cuentas por cobrar.</p></div>
         </div>
         <div class="filter-bar">
           <label>Desde<input type="date" id="reportsFrom" /></label>
           <label>Hasta<input type="date" id="reportsTo" /></label>
           <button class="secondary-btn" type="button" data-clear-filter="reports">Limpiar filtro</button>
         </div>
-        <div class="stats-grid report-kpis">
+        <div class="report-shortcuts">
+          <button class="secondary-btn compact" type="button" data-report-period="today">Hoy</button>
+          <button class="secondary-btn compact" type="button" data-report-period="week">Esta semana</button>
+          <button class="secondary-btn compact" type="button" data-report-period="month">Este mes</button>
+          <button class="secondary-btn compact" type="button" data-report-period="previous-month">Mes anterior</button>
+          <button class="secondary-btn compact" type="button" data-report-period="year">Este año</button>
+          <button class="secondary-btn compact" type="button" id="exportFinanceCsv">⬇ Exportar CSV / Excel</button>
+          <button class="secondary-btn compact" type="button" id="printFinanceReport">🖨 Imprimir / PDF</button>
+        </div>
+        <div class="stats-grid report-kpis report-kpis-expanded">
           <article class="stat-card"><span>Ventas</span><strong id="reportSales">$ 0</strong><small>COP</small></article>
           <article class="stat-card"><span>Costo de ventas</span><strong id="reportCosts">$ 0</strong><small>COP</small></article>
           <article class="stat-card highlight"><span>Ganancia bruta</span><strong id="reportGross">$ 0</strong><small>COP</small></article>
           <article class="stat-card"><span>Ganancia neta</span><strong id="reportNet">$ 0</strong><small>COP</small></article>
           <article class="stat-card"><span>Margen neto</span><strong id="reportMargin">0%</strong><small>del periodo</small></article>
+          <article class="stat-card"><span>Dinero cobrado</span><strong id="reportCollected">$ 0</strong><small>pagos recibidos</small></article>
+          <article class="stat-card"><span>Por cobrar</span><strong id="reportReceivable">$ 0</strong><small>pedidos activos</small></article>
         </div>
         <div class="content-grid report-grid">
           <article class="panel table-panel">
@@ -319,6 +418,55 @@
             <div class="empty-state small" id="reportCategoriesEmpty"><p>No hay datos para mostrar.</p></div>
           </article>
         </div>
+
+        <div class="finance-report-extras" id="financeReportExtras">
+        <div class="content-grid report-grid finance-advanced-grid">
+          <article class="panel">
+            <div class="panel-header"><div><h3>Comparación mensual</h3><p>Mes de referencia frente al mes anterior.</p></div></div>
+            <div class="month-comparison" id="monthComparison"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-header"><div><h3>Ingresos por método de pago</h3><p>Dinero realmente recibido en el periodo.</p></div></div>
+            <div class="payment-bars" id="paymentMethodBars"></div>
+          </article>
+        </div>
+        <div class="content-grid report-grid finance-advanced-grid">
+          <article class="panel table-panel">
+            <div class="panel-header"><div><h3>Materiales consumidos</h3><p>Valor de insumos utilizados en las ventas.</p></div></div>
+            <div class="table-wrap"><table><thead><tr><th>Material</th><th>Cantidad usada</th><th>Costo consumido</th></tr></thead><tbody id="reportMaterialsTable"></tbody></table></div>
+            <div class="empty-state small" id="reportMaterialsEmpty"><p>No hay consumo de materiales en este periodo.</p></div>
+          </article>
+          <article class="panel table-panel">
+            <div class="panel-header"><div><h3>Cuentas por cobrar</h3><p>Pedidos activos con saldo pendiente.</p></div></div>
+            <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Entrega</th><th>Total</th><th>Pagado</th><th>Saldo</th></tr></thead><tbody id="receivablesTable"></tbody></table></div>
+            <div class="empty-state small" id="receivablesEmpty"><p>No hay saldos pendientes.</p></div>
+          </article>
+        </div>
+        </div>
+      </section>
+
+      <section class="page-section" id="cash">
+        <div class="section-heading"><div><h3>Cierre de caja</h3><p>Control del efectivo esperado y contado al final del día.</p></div></div>
+        <article class="panel cash-close-panel">
+          <div class="cash-close-form-grid">
+            <label>Fecha<input type="date" id="cashCloseDate" /></label>
+            <label>Base / efectivo inicial (COP)<input type="number" id="cashOpening" min="0" step="1" value="0" /></label>
+            <label>Efectivo contado (COP)<input type="number" id="cashCounted" min="0" step="1" value="0" /></label>
+          </div>
+          <div class="cash-close-kpis">
+            <div><span>Ingresos en efectivo</span><strong id="cashCloseIncome">$ 0</strong></div>
+            <div><span>Salidas en efectivo</span><strong id="cashCloseOut">$ 0</strong></div>
+            <div><span>Efectivo esperado</span><strong id="cashCloseExpected">$ 0</strong></div>
+            <div class="cash-close-difference"><span>Diferencia</span><strong id="cashCloseDifference">$ 0</strong></div>
+          </div>
+          <label>Notas <span class="optional">(opcional)</span><textarea id="cashCloseNotes" rows="2" placeholder="Ej: Se dejan $50.000 de base para mañana"></textarea></label>
+          <button class="primary-btn" type="button" id="saveCashClosure">Guardar cierre de caja</button>
+        </article>
+        <article class="panel table-panel">
+          <div class="panel-header"><div><h3>Historial de cierres</h3><p>Últimos cierres registrados.</p></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Base</th><th>Esperado</th><th>Contado</th><th>Diferencia</th><th>Notas</th></tr></thead><tbody id="cashClosuresTable"></tbody></table></div>
+          <div class="empty-state small" id="cashClosuresEmpty"><p>Todavía no hay cierres registrados.</p></div>
+        </article>
       </section>
 
       <section class="page-section" id="users">
@@ -444,7 +592,12 @@
           <label>Cantidad inicial<input name="quantity" type="number" min="0.0001" step="0.0001" required placeholder="Ej: 20" /></label>
           <label>Costo total inicial<input name="cost" type="number" min="0" step="1" required placeholder="Ej: 12000" /></label>
         </div>
-        <small class="form-help">Esta compra inicial crea el material. Las siguientes reposiciones se registran desde “Compras”.</small>
+        <div class="form-grid">
+          <label>Stock mínimo / alerta<input name="minimumStock" type="number" min="0" step="0.0001" value="0" placeholder="Ej: 5" /></label>
+          <label>Proveedor preferido<select name="preferredSupplierId" id="materialPreferredSupplier"><option value="">Sin proveedor</option></select></label>
+        </div>
+        <label>Método de pago inicial<select name="paymentMethod" required><option>Efectivo</option><option>Nequi</option><option>Daviplata</option><option>Transferencia bancaria</option><option>Tarjeta</option><option>Otro</option></select></label>
+        <small class="form-help">El stock mínimo activa la alerta de reposición. Esta compra inicial crea el material; las siguientes se registran desde “Compras”.</small>
         <button class="primary-btn full" id="materialSubmitBtn" type="submit">Guardar material</button>
       </form>
     </div>
@@ -459,10 +612,43 @@
           <label>Cantidad comprada<input name="quantity" type="number" min="0.0001" step="0.0001" required placeholder="Ej: 50" /></label>
           <label>Total pagado (COP)<input name="cost" type="number" min="0" step="1" required placeholder="Ej: 30000" /></label>
         </div>
-        <label>Fecha<input name="date" type="date" required /></label>
-        <label>Proveedor o nota <span class="optional">(opcional)</span><input name="note" placeholder="Ej: Distribuidora Centro" /></label>
+        <div class="form-grid">
+          <label>Fecha<input name="date" type="date" required /></label>
+          <label>Método de pago<select name="paymentMethod" required><option>Efectivo</option><option>Nequi</option><option>Daviplata</option><option>Transferencia bancaria</option><option>Tarjeta</option><option>Otro</option></select></label>
+        </div>
+        <div class="form-grid">
+          <label>Proveedor <span class="optional">(opcional)</span><select name="supplierId" id="purchaseSupplier"><option value="">Sin proveedor</option></select></label>
+          <label>Nota <span class="optional">(opcional)</span><input name="note" placeholder="Ej: Factura 104 / promoción" /></label>
+        </div>
         <div class="purchase-preview" id="purchasePreview">Completa cantidad y costo para ver el costo unitario de esta compra.</div>
         <button class="primary-btn full" id="purchaseSubmitBtn" type="submit">Guardar compra y aumentar inventario</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="inventoryAdjustmentModal">
+    <div class="modal">
+      <div class="modal-header"><h3>Ajustar inventario</h3><button class="close-modal" data-close="inventoryAdjustmentModal">×</button></div>
+      <form id="inventoryAdjustmentForm">
+        <label>Material<select name="materialId" id="inventoryAdjustmentMaterial" required></select></label>
+        <label>Motivo<select name="kind" required><option value="loss">Pérdida / desperdicio</option><option value="damage">Daño</option><option value="internal">Uso interno</option><option value="correction_minus">Corrección negativa</option><option value="correction_plus">Corrección positiva</option><option value="manual_in">Entrada manual</option></select></label>
+        <div class="form-grid"><label>Cantidad<input name="quantity" type="number" min="0.0001" step="0.0001" required /></label><label>Fecha<input name="date" type="date" required /></label></div>
+        <label>Detalle / motivo<input name="note" required placeholder="Ej: Cinta dañada durante elaboración" /></label>
+        <div class="inventory-adjustment-preview" id="inventoryAdjustmentPreview"></div>
+        <button class="primary-btn full" type="submit">Guardar ajuste</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="supplierModal">
+    <div class="modal">
+      <div class="modal-header"><h3 id="supplierModalTitle">Nuevo proveedor</h3><button class="close-modal" data-close="supplierModal">×</button></div>
+      <form id="supplierForm">
+        <label>Nombre del proveedor<input name="name" required placeholder="Ej: Distribuidora Flores SAS" /></label>
+        <div class="form-grid"><label>Persona de contacto <span class="optional">(opcional)</span><input name="contactName" /></label><label>Teléfono / WhatsApp <span class="optional">(opcional)</span><input name="phone" /></label></div>
+        <label>Ciudad / zona <span class="optional">(opcional)</span><input name="city" /></label>
+        <label>Notas <span class="optional">(opcional)</span><textarea name="notes" rows="3" placeholder="Horarios, condiciones, productos que vende..."></textarea></label>
+        <button class="primary-btn full" id="supplierSubmitBtn" type="submit">Guardar proveedor</button>
       </form>
     </div>
   </div>
@@ -538,12 +724,32 @@
         </div>
         <div class="form-grid">
           <label>Total acordado (COP)<input name="total" id="orderTotalInput" type="number" min="0" step="1" required /></label>
-          <label>Anticipo recibido (COP)<input name="deposit" id="orderDepositInput" type="number" min="0" step="1" value="0" required /></label>
+          <label>Anticipo inicial (COP)<input name="deposit" id="orderDepositInput" type="number" min="0" step="1" value="0" required /></label>
         </div>
+        <label id="orderDepositMethodWrap">Método del anticipo<select name="depositMethod" id="orderDepositMethod"><option>Efectivo</option><option>Nequi</option><option>Daviplata</option><option>Transferencia bancaria</option><option>Tarjeta</option><option>Otro</option></select></label>
         <div class="order-money-preview" id="orderMoneyPreview">Saldo pendiente: $ 0</div>
         <label>Estado<select name="status" required><option>Pendiente</option><option>En elaboración</option><option>Listo</option><option>Entregado</option><option>Cancelado</option></select></label>
         <label>Detalles del pedido <span class="optional">(opcional)</span><textarea name="notes" rows="3" placeholder="Ej: 12 rosas rojas, tarjeta con mensaje..." ></textarea></label>
         <button class="primary-btn full" id="orderSubmitBtn" type="submit">Guardar pedido</button>
+      </form>
+    </div>
+  </div>
+
+
+  <div class="modal-backdrop" id="productionModal">
+    <div class="modal modal-large">
+      <div class="modal-header"><h3 id="productionModalTitle">Planificar producción</h3><button class="close-modal" data-close="productionModal">×</button></div>
+      <form id="productionForm">
+        <input type="hidden" name="orderId" />
+        <div class="admin-target" id="productionOrderTarget"></div>
+        <div class="form-grid">
+          <label>Fecha programada<input name="scheduledDate" id="productionScheduledDate" type="date" required /></label>
+          <label>Estado<select name="status" id="productionPlanStatus" required><option>Pendiente</option><option>Preparando</option><option>Fabricando</option><option>Terminado</option></select></label>
+        </div>
+        <label>Nota de producción <span class="optional">(opcional)</span><textarea name="notes" rows="2" placeholder="Ej: Preparar primero las rosas rojas; empaque pendiente"></textarea></label>
+        <div class="production-requirements-head"><strong>Materiales necesarios</strong><small>La reserva evita que el mismo material se prometa a varios pedidos.</small></div>
+        <div class="production-requirements" id="productionRequirementsPreview"></div>
+        <button class="primary-btn full" type="submit" id="productionSubmitBtn">Guardar plan y reservar materiales</button>
       </form>
     </div>
   </div>
@@ -557,6 +763,7 @@
           <label>Cantidad<input name="quantity" type="number" min="1" step="1" value="1" required /></label>
           <label>Fecha<input name="date" type="date" required /></label>
         </div>
+        <label>Método de pago<select name="paymentMethod" id="salePaymentMethod" required><option>Efectivo</option><option>Nequi</option><option>Daviplata</option><option>Transferencia bancaria</option><option>Tarjeta</option><option>Otro</option></select></label>
         <div class="sale-preview" id="salePreview"></div>
         <button class="primary-btn full" id="saleSubmitBtn" type="submit">Guardar venta y descontar materiales</button>
       </form>
@@ -584,7 +791,23 @@
           <label>Monto (COP)<input name="amount" type="number" min="0" step="1" required placeholder="Ej: 25000" /></label>
           <label>Fecha<input name="date" type="date" required /></label>
         </div>
+        <label>Método de pago<select name="paymentMethod" required><option>Efectivo</option><option>Nequi</option><option>Daviplata</option><option>Transferencia bancaria</option><option>Tarjeta</option><option>Otro</option></select></label>
         <button class="primary-btn full" id="expenseSubmitBtn" type="submit">Guardar gasto</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="paymentModal">
+    <div class="modal">
+      <div class="modal-header"><h3>Registrar abono</h3><button class="close-modal" data-close="paymentModal">×</button></div>
+      <form id="paymentForm">
+        <input type="hidden" name="orderId" />
+        <div class="admin-target" id="paymentOrderTarget"></div>
+        <div class="form-grid"><label>Monto recibido (COP)<input name="amount" id="paymentAmount" type="number" min="1" step="1" required /></label><label>Fecha<input name="date" type="date" required /></label></div>
+        <label>Método de pago<select name="method" required><option>Efectivo</option><option>Nequi</option><option>Daviplata</option><option>Transferencia bancaria</option><option>Tarjeta</option><option>Otro</option></select></label>
+        <label>Nota <span class="optional">(opcional)</span><input name="note" placeholder="Ej: Segundo abono" /></label>
+        <div class="order-money-preview" id="paymentPreview"></div>
+        <button class="primary-btn full" type="submit">Guardar abono</button>
       </form>
     </div>
   </div>
