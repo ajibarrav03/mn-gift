@@ -27,7 +27,7 @@
   <div class="auth-screen" id="authScreen">
     <div class="auth-card">
       <img src="logo-mn-gift.png" alt="Logo de M&N Gift" class="auth-logo" />
-      <div class="auth-heading"><h1>M&N Gift</h1><p>Control de negocio · V.MN.0.0.005</p></div>
+      <div class="auth-heading"><h1>M&N Gift</h1><p>Control de negocio · V.MN.0.0.006</p></div>
       <form id="loginForm" class="auth-form">
         <label>Correo electrónico<input id="loginEmail" type="email" autocomplete="username" required placeholder="tu@correo.com" /></label>
         <label>Contraseña<input id="loginPassword" type="password" autocomplete="current-password" required placeholder="••••••••" /></label>
@@ -66,7 +66,7 @@
         <button class="nav-btn admin-only" id="usersNavBtn" data-section="users" hidden>👑 <span>Usuarios</span></button>
         <button class="nav-btn" data-section="settings">⚙️ <span>Configuración</span></button>
       </nav>
-      <div class="sidebar-footer"><small>Moneda: COP 🇨🇴</small><small class="version-tag">V.MN.0.0.005</small></div>
+      <div class="sidebar-footer"><small>Moneda: COP 🇨🇴</small><small class="version-tag">V.MN.0.0.006</small></div>
     </aside>
 
     <main class="main-content">
@@ -154,6 +154,14 @@
           <div><h3>Materiales</h3><p>Registra tus insumos y controla costo unitario, existencia y estado.</p></div>
           <button class="primary-btn" id="openMaterialModal">+ Nuevo material</button>
         </div>
+        <div class="filter-bar materials-search-bar">
+          <label class="materials-search-label">
+            <span>Buscar material</span>
+            <input type="search" id="materialsSearch" placeholder="Escribe el nombre del material..." autocomplete="off" />
+          </label>
+          <span class="materials-search-count" id="materialsSearchCount" aria-live="polite"></span>
+          <button class="secondary-btn" type="button" id="clearMaterialsSearch">Limpiar</button>
+        </div>
         <div class="panel table-panel">
           <div class="table-wrap">
             <table>
@@ -185,7 +193,7 @@
               <label>Desde<input type="date" id="inventoryMovementFrom" /></label>
               <label>Hasta<input type="date" id="inventoryMovementTo" /></label>
             </div>
-            <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Material</th><th>Movimiento</th><th>Cantidad</th><th>Existencia posterior</th><th>Valor</th><th>Detalle</th></tr></thead><tbody id="inventoryMovementsTable"></tbody></table></div>
+            <div class="table-wrap inventory-movements-scroll" id="inventoryMovementsScroll"><table><thead><tr><th>Fecha</th><th>Material</th><th>Movimiento</th><th>Cantidad</th><th>Existencia posterior</th><th>Valor</th><th>Detalle</th></tr></thead><tbody id="inventoryMovementsTable"></tbody></table></div>
             <div class="empty-state small" id="inventoryMovementsEmpty"><p>No hay movimientos para los filtros seleccionados.</p></div>
           </article>
           <article class="panel table-panel suppliers-panel">
@@ -195,7 +203,13 @@
           </article>
         </div>
         <article class="panel inventory-reorder-panel">
-          <div class="panel-header"><div><h3>Lista de reposición</h3><p>Materiales que llegaron o bajaron de su mínimo configurado.</p></div></div>
+          <div class="panel-header reorder-panel-header">
+            <div><h3>Lista de reposición</h3><p>Materiales que llegaron o bajaron de su mínimo configurado.</p></div>
+            <div class="reorder-actions">
+              <button class="secondary-btn" id="printInventoryReorder" type="button">🖨️ Imprimir / Guardar PDF</button>
+              <button class="secondary-btn" id="downloadInventoryReorder" type="button">⬇ Descargar lista</button>
+            </div>
+          </div>
           <div id="inventoryReorderList" class="reorder-list"></div>
         </article>
       </section>
@@ -268,7 +282,7 @@
         <div class="panel table-panel">
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Entrega</th><th>Cliente</th><th>Producto</th><th>Cant.</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th>Acciones</th></tr></thead>
+              <thead><tr><th>Entrega</th><th>Cliente</th><th>Productos</th><th>Unidades</th><th>Total</th><th>Pagado</th><th>Saldo</th><th>Estado</th><th>Acciones</th></tr></thead>
               <tbody id="ordersTable"></tbody>
             </table>
           </div>
@@ -350,7 +364,7 @@
 
       <section class="page-section" id="expenses">
         <div class="section-heading">
-          <div><h3>Gastos</h3><p>Registra publicidad, transporte, domicilios, servicios y otros gastos del negocio.</p></div>
+          <div><h3>Gastos</h3><p>Registra publicidad, transporte, servicios, pago a empleados y otros gastos del negocio.</p></div>
           <button class="primary-btn" id="openExpenseModal">+ Nuevo gasto</button>
         </div>
         <div class="filter-bar">
@@ -446,7 +460,42 @@
       </section>
 
       <section class="page-section" id="cash">
-        <div class="section-heading"><div><h3>Cierre de caja</h3><p>Control del efectivo esperado y contado al final del día.</p></div></div>
+        <div class="section-heading"><div><h3>Caja y movimientos</h3><p>Controla todos los ingresos y egresos del negocio y realiza el cierre del efectivo diario.</p></div></div>
+
+        <article class="panel table-panel cash-movements-panel">
+          <div class="panel-header">
+            <div><h3>Movimientos de caja</h3><p>Registro unificado de cobros, devoluciones, compras y gastos, sin importar el método de pago.</p></div>
+            <div class="section-actions">
+              <button class="secondary-btn" id="printCashMovements" type="button">🖨️ Imprimir / Guardar PDF</button>
+              <button class="secondary-btn" id="downloadCashMovements" type="button">⬇ Descargar CSV</button>
+            </div>
+          </div>
+          <div class="filter-bar cash-movements-filter">
+            <label>Desde<input type="date" id="cashMovementsFrom" /></label>
+            <label>Hasta<input type="date" id="cashMovementsTo" /></label>
+            <label>Movimiento
+              <select id="cashMovementType"><option value="">Todos</option><option value="Ingreso">Ingresos</option><option value="Egreso">Egresos</option></select>
+            </label>
+            <label>Método
+              <select id="cashMovementMethod"><option value="">Todos</option><option>Efectivo</option><option>Nequi</option><option>Daviplata</option><option>Transferencia bancaria</option><option>Tarjeta</option><option>Otro</option></select>
+            </label>
+            <button class="secondary-btn" id="clearCashMovementFilters" type="button">Limpiar filtros</button>
+          </div>
+          <div class="cash-close-kpis cash-movement-kpis">
+            <div><span>Total ingresos</span><strong id="cashMovementIncome">$ 0</strong></div>
+            <div><span>Total egresos</span><strong id="cashMovementOut">$ 0</strong></div>
+            <div class="cash-movement-net"><span>Movimiento neto</span><strong id="cashMovementNet">$ 0</strong></div>
+          </div>
+          <div class="table-wrap cash-movements-scroll" id="cashMovementsScroll">
+            <table>
+              <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Método</th><th>Ingreso</th><th>Egreso</th></tr></thead>
+              <tbody id="cashMovementsTable"></tbody>
+            </table>
+          </div>
+          <div class="empty-state small" id="cashMovementsEmpty"><p>No hay movimientos para los filtros seleccionados.</p></div>
+        </article>
+
+        <div class="section-heading cash-close-heading"><div><h3>Cierre de efectivo</h3><p>El cierre diario utiliza únicamente movimientos realizados en efectivo.</p></div></div>
         <article class="panel cash-close-panel">
           <div class="cash-close-form-grid">
             <label>Fecha<input type="date" id="cashCloseDate" /></label>
@@ -631,7 +680,10 @@
       <div class="modal-header"><h3>Ajustar inventario</h3><button class="close-modal" data-close="inventoryAdjustmentModal">×</button></div>
       <form id="inventoryAdjustmentForm">
         <label>Material<select name="materialId" id="inventoryAdjustmentMaterial" required></select></label>
-        <label>Motivo<select name="kind" required><option value="loss">Pérdida / desperdicio</option><option value="damage">Daño</option><option value="internal">Uso interno</option><option value="correction_minus">Corrección negativa</option><option value="correction_plus">Corrección positiva</option><option value="manual_in">Entrada manual</option></select></label>
+        <div class="form-grid">
+          <label>Acción<select name="action" id="inventoryAdjustmentAction" required><option value="subtract">Restar al inventario</option><option value="add">Sumar al inventario</option></select></label>
+          <label>Motivo<select name="kind" id="inventoryAdjustmentKind" required></select></label>
+        </div>
         <div class="form-grid"><label>Cantidad<input name="quantity" type="number" min="0.0001" step="0.0001" required /></label><label>Fecha<input name="date" type="date" required /></label></div>
         <label>Detalle / motivo<input name="note" required placeholder="Ej: Cinta dañada durante elaboración" /></label>
         <div class="inventory-adjustment-preview" id="inventoryAdjustmentPreview"></div>
@@ -713,12 +765,21 @@
     <div class="modal modal-large">
       <div class="modal-header"><h3 id="orderModalTitle">Nuevo pedido</h3><button class="close-modal" data-close="orderModal">×</button></div>
       <form id="orderForm">
-        <div class="form-grid">
-          <label>Cliente<select name="customerId" id="orderCustomer" required></select></label>
-          <label>Producto<select name="productId" id="orderProduct" required></select></label>
+        <label>Cliente<select name="customerId" id="orderCustomer" required></select></label>
+        <div class="order-items-builder">
+          <div class="order-items-heading">
+            <div><strong>Productos del pedido</strong><small>Agrega todos los productos y la cantidad de cada uno.</small></div>
+          </div>
+          <div class="order-item-add-row">
+            <label>Producto<select id="orderProduct"></select></label>
+            <label>Cantidad<input id="orderItemQuantity" type="number" min="1" step="1" value="1" /></label>
+            <button class="secondary-btn" id="addOrderItem" type="button">+ Agregar producto</button>
+          </div>
+          <div class="order-items-list" id="orderItemsList"></div>
+          <div class="order-items-empty" id="orderItemsEmpty">Todavía no agregaste productos a este pedido.</div>
+          <div class="order-items-subtotal"><span>Subtotal según precios actuales</span><strong id="orderItemsSubtotal">$ 0</strong></div>
         </div>
-        <div class="form-grid three">
-          <label>Cantidad<input name="quantity" type="number" min="1" step="1" value="1" required /></label>
+        <div class="form-grid">
           <label>Fecha del pedido<input name="orderDate" type="date" required /></label>
           <label>Fecha de entrega<input name="deliveryDate" type="date" required /></label>
         </div>
@@ -726,7 +787,7 @@
           <label>Total acordado (COP)<input name="total" id="orderTotalInput" type="number" min="0" step="1" required /></label>
           <label>Anticipo inicial (COP)<input name="deposit" id="orderDepositInput" type="number" min="0" step="1" value="0" required /></label>
         </div>
-        <label id="orderDepositMethodWrap">Método del anticipo<select name="depositMethod" id="orderDepositMethod"><option>Efectivo</option><option>Nequi</option><option>Daviplata</option><option>Transferencia bancaria</option><option>Tarjeta</option><option>Otro</option></select></label>
+        <label id="orderDepositMethodWrap">Método del anticipo <span class="optional">(editable)</span><select name="depositMethod" id="orderDepositMethod"><option>Efectivo</option><option>Nequi</option><option>Daviplata</option><option>Transferencia bancaria</option><option>Tarjeta</option><option>Otro</option></select></label>
         <div class="order-money-preview" id="orderMoneyPreview">Saldo pendiente: $ 0</div>
         <label>Estado<select name="status" required><option>Pendiente</option><option>En elaboración</option><option>Listo</option><option>Entregado</option><option>Cancelado</option></select></label>
         <label>Detalles del pedido <span class="optional">(opcional)</span><textarea name="notes" rows="3" placeholder="Ej: 12 rosas rojas, tarjeta con mensaje..." ></textarea></label>
@@ -770,6 +831,15 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="saleDetailModal">
+    <div class="modal sale-detail-modal">
+      <div class="modal-header"><h3>Detalle de venta</h3><button class="close-modal" data-close="saleDetailModal">×</button></div>
+      <div class="sale-detail-summary" id="saleDetailSummary"></div>
+      <div class="sale-detail-section-title">Productos y materiales registrados</div>
+      <div class="sale-detail-items" id="saleDetailItems"></div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="expenseModal">
     <div class="modal">
       <div class="modal-header"><h3 id="expenseModalTitle">Registrar gasto</h3><button class="close-modal" data-close="expenseModal">×</button></div>
@@ -782,9 +852,11 @@
             <option value="Servicios">Servicios</option>
             <option value="Herramientas">Herramientas</option>
             <option value="Comisiones">Comisiones</option>
+            <option value="Pago a empleados">Pago a empleados</option>
             <option value="Empaque general">Empaque general</option>
             <option value="Otros">Otros</option>
           </select>
+          <small class="expense-profit-note">Los pagos a empleados se descuentan automáticamente de la ganancia neta del negocio.</small>
         </label>
         <label>Descripción<input name="description" required placeholder="Ej: Publicidad en Instagram" /></label>
         <div class="form-grid">
@@ -808,6 +880,24 @@
         <label>Nota <span class="optional">(opcional)</span><input name="note" placeholder="Ej: Segundo abono" /></label>
         <div class="order-money-preview" id="paymentPreview"></div>
         <button class="primary-btn full" type="submit">Guardar abono</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="refundModal">
+    <div class="modal">
+      <div class="modal-header"><h3>Devolver dinero</h3><button class="close-modal" data-close="refundModal">×</button></div>
+      <form id="refundForm">
+        <input type="hidden" name="orderId" />
+        <div class="admin-target" id="refundOrderTarget"></div>
+        <div class="form-grid">
+          <label>Monto a devolver (COP)<input name="amount" type="number" min="1" step="1" readonly required /></label>
+          <label>Fecha de devolución<input name="date" type="date" readonly required /></label>
+        </div>
+        <label>Método de devolución<select name="method" required><option>Efectivo</option><option>Nequi</option><option>Daviplata</option><option>Transferencia bancaria</option><option>Tarjeta</option><option>Otro</option></select></label>
+        <label>Nota <span class="optional">(opcional)</span><input name="note" placeholder="Ej: Pedido cancelado por el cliente" /></label>
+        <div class="order-money-preview" id="refundPreview"></div>
+        <button class="primary-btn full refund-confirm-btn" type="submit">Confirmar devolución total</button>
       </form>
     </div>
   </div>

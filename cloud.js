@@ -1,6 +1,6 @@
 /*
   M&N Gift — conexión Supabase
-  Versión de desarrollo: V.MN.0.0.005
+  Versión de desarrollo: V.MN.0.0.006
   Esta clave es PUBLISHABLE y puede vivir en el frontend.
   Nunca incluir service_role o sb_secret_ en este archivo.
 */
@@ -153,7 +153,7 @@ function emergencyLocalSnapshot(label='precloud'){
   try {
     localStorage.setItem(`mngifts_${label}_backup`, JSON.stringify({
       exportedAt: new Date().toISOString(),
-      version: 'V.MN.0.0.005',
+      version: 'V.MN.0.0.006',
       data: {
         materials: state.materials,
         products: state.products,
@@ -286,20 +286,22 @@ function applyCloudBundle(b){
 
   state.customers = (b.clients||[]).map(c=>({id:c.id,name:c.name,phone:c.phone||'',location:c.city||'',notes:c.notes||''}));
   const customerMap = new Map(state.customers.map(c=>[c.id,c]));
-  const orderItemMap = new Map((b.order_items||[]).map(i=>[i.order_id,i]));
+  const orderItemsByOrder = new Map();
+  (b.order_items||[]).forEach(i=>{if(!orderItemsByOrder.has(i.order_id))orderItemsByOrder.set(i.order_id,[]);orderItemsByOrder.get(i.order_id).push(i)});
   const salesByOrder = new Map((b.sales||[]).filter(s=>s.order_id).map(s=>[s.order_id,s.id]));
   state.orders = (b.orders||[]).map(o=>{
-    const i=orderItemMap.get(o.id), c=customerMap.get(o.client_id);
+    const dbItems=orderItemsByOrder.get(o.id)||[],items=dbItems.map(i=>({id:i.id,productId:i.product_id||'',productName:i.product_name||'Producto',quantity:num(i.quantity||1)})),first=items[0]||{},c=customerMap.get(o.client_id);
     return {
-      id:o.id, customerId:o.client_id||'', customerName:c?.name||'', customerPhone:c?.phone||'',
-      productId:i?.product_id||'', productName:i?.product_name||'Producto', quantity:num(i?.quantity||1),
+      id:o.id, customerId:o.client_id||'', customerName:c?.name||'', customerPhone:c?.phone||'',items,
+      productId:first.productId||'', productName:first.productName||'Producto', quantity:items.reduce((sum,i)=>sum+num(i.quantity),0),
       orderDate:o.order_date, deliveryDate:o.delivery_date||o.order_date,
       total:num(o.total), deposit:num(o.advance_payment), status:o.status, notes:o.notes||'',
       saleId:salesByOrder.get(o.id)||null
     };
   });
 
-  const saleItemMap = new Map((b.sale_items||[]).map(i=>[i.sale_id,i]));
+  const saleItemsBySale = new Map();
+  (b.sale_items||[]).forEach(i=>{if(!saleItemsBySale.has(i.sale_id))saleItemsBySale.set(i.sale_id,[]);saleItemsBySale.get(i.sale_id).push(i)});
   const usageBySaleItem = new Map();
   (b.sale_material_usage||[]).forEach(u=>{
     if(!usageBySaleItem.has(u.sale_item_id)) usageBySaleItem.set(u.sale_item_id,[]);
@@ -310,13 +312,13 @@ function applyCloudBundle(b){
   });
   const productMap = new Map(state.products.map(p=>[p.id,p]));
   state.sales = (b.sales||[]).map(s=>{
-    const i=saleItemMap.get(s.id), p=productMap.get(i?.product_id);
+    const dbItems=saleItemsBySale.get(s.id)||[],items=dbItems.map(i=>{const p=productMap.get(i.product_id);return{id:i.id,productId:i.product_id||'',productName:i.product_name||'Producto',productCategory:p?.category||'',quantity:num(i.quantity||1),unitPrice:num(i.unit_price),unitCost:num(i.unit_cost),consumption:usageBySaleItem.get(i.id)||[]}}),first=items[0]||{},consumption=combineConsumptions(items.map(i=>i.consumption));
     return {
       id:s.id, orderId:s.order_id||null, customerId:s.client_id||null,
-      customerName:customerMap.get(s.client_id)?.name||'', productId:i?.product_id||'',
-      productName:i?.product_name||'Producto', productCategory:p?.category||'', quantity:num(i?.quantity||1),
-      date:s.sale_date, unitPrice:num(i?.unit_price), total:num(s.total), unitCost:num(i?.unit_cost),
-      cost:num(s.total_cost), paymentMethod:s.payment_method||'Otro', consumption:usageBySaleItem.get(i?.id)||[]
+      customerName:customerMap.get(s.client_id)?.name||'', productId:first.productId||'',
+      productName:items.length>1?`${first.productName||'Producto'} + ${items.length-1} más`:(first.productName||'Producto'), productCategory:first.productCategory||'', quantity:items.reduce((sum,i)=>sum+num(i.quantity),0),
+      date:s.sale_date, unitPrice:items.length===1?num(first.unitPrice):0, total:num(s.total), unitCost:items.length===1?num(first.unitCost):0,
+      cost:num(s.total_cost), paymentMethod:s.payment_method||'Otro', items, consumption
     };
   });
 
@@ -430,8 +432,9 @@ async function syncOperationalUserToCloud(uid){
     if(error) throw new Error(`materials: ${error.message}`);
   }
 
-  const orderItems=state.orders.map(o=>({id:o.id,user_id:uid,order_id:o.id,product_id:o.productId||null,product_name:o.productName||getProduct(o.productId)?.name||'Producto',quantity:Math.max(1,Math.round(num(o.quantity)||1)),unit_price:num(o.quantity)?num(o.total)/num(o.quantity):num(o.total),unit_cost:num(o.quantity)?calculateProductCost(getProduct(o.productId))*1:0}));
+  const orderItems=[];state.orders.forEach(o=>normalizedOrderItems(o).forEach(i=>orderItems.push({id:i.id,user_id:uid,order_id:o.id,product_id:i.productId||null,product_name:i.productName||getProduct(i.productId)?.name||'Producto',quantity:Math.max(1,Math.round(num(i.quantity)||1)),unit_price:orderItemUnitPrice(o,i),unit_cost:calculateProductCost(getProduct(i.productId))})));
   await upsertRows('order_items',orderItems);
+  await deleteMissing('order_items',orderItems.map(x=>x.id));
 
   const {data:existingSales,error:salesErr}=await cloud.client.from('sales').select('id');
   if(salesErr) throw new Error(`sales: ${salesErr.message}`);
@@ -442,12 +445,12 @@ async function syncOperationalUserToCloud(uid){
     const {error}=await cloud.client.from('sales').insert(sales);
     if(error) throw new Error(`sales: ${error.message}`);
 
-    const saleItems=newSalesState.map(s=>({id:s.id,user_id:uid,sale_id:s.id,product_id:s.productId||null,product_name:s.productName||getProduct(s.productId)?.name||'Producto',quantity:Math.max(1,Math.round(num(s.quantity)||1)),unit_price:num(s.unitPrice),unit_cost:num(s.unitCost)}));
+    const saleItems=[];newSalesState.forEach(s=>normalizedSaleItems(s).forEach(i=>saleItems.push({id:i.id,user_id:uid,sale_id:s.id,product_id:i.productId||null,product_name:i.productName||getProduct(i.productId)?.name||'Producto',quantity:Math.max(1,Math.round(num(i.quantity)||1)),unit_price:num(i.unitPrice),unit_cost:num(i.unitCost)})));
     const {error:itemErr}=await cloud.client.from('sale_items').insert(saleItems);
     if(itemErr) throw new Error(`sale_items: ${itemErr.message}`);
 
     const usages=[];
-    newSalesState.forEach(s=>(s.consumption||[]).forEach(u=>usages.push({user_id:uid,sale_item_id:s.id,material_id:u.materialId||null,material_name:u.materialName||getMaterial(u.materialId)?.name||'Material',quantity_used:num(u.quantity),unit_cost:num(u.unitCost)||materialUnitCost(getMaterial(u.materialId))})));
+    newSalesState.forEach(s=>normalizedSaleItems(s).forEach(i=>{const itemUsage=i.consumption?.length?i.consumption:(normalizedSaleItems(s).length===1?s.consumption||[]:[]);itemUsage.forEach(u=>usages.push({user_id:uid,sale_item_id:i.id,material_id:u.materialId||null,material_name:u.materialName||getMaterial(u.materialId)?.name||'Material',quantity_used:num(u.quantity),unit_cost:num(u.unitCost)||materialUnitCost(getMaterial(u.materialId))}))}));
     if(usages.length){
       const {error:usageErr}=await cloud.client.from('sale_material_usage').insert(usages);
       if(usageErr) throw new Error(`sale_material_usage: ${usageErr.message}`);
@@ -552,15 +555,15 @@ async function syncAllToCloud(force=false){
     state.products.forEach(p=>normalizedRecipe(p).forEach(r=>recipes.push({user_id:uid,product_id:p.id,material_id:r.materialId,quantity:num(r.quantity)})));
     await replaceBusinessRows('product_materials',recipes);
 
-    const orderItems=state.orders.map(o=>({id:o.id,user_id:uid,order_id:o.id,product_id:o.productId||null,product_name:o.productName||getProduct(o.productId)?.name||'Producto',quantity:Math.max(1,Math.round(num(o.quantity)||1)),unit_price:num(o.quantity)?num(o.total)/num(o.quantity):num(o.total),unit_cost:num(o.quantity)?calculateProductCost(getProduct(o.productId))*1:0}));
+    const orderItems=[];state.orders.forEach(o=>normalizedOrderItems(o).forEach(i=>orderItems.push({id:i.id,user_id:uid,order_id:o.id,product_id:i.productId||null,product_name:i.productName||getProduct(i.productId)?.name||'Producto',quantity:Math.max(1,Math.round(num(i.quantity)||1)),unit_price:orderItemUnitPrice(o,i),unit_cost:calculateProductCost(getProduct(i.productId))})));
     await replaceBusinessRows('order_items',orderItems);
 
     // El uso histórico depende de sale_items, por eso se reemplaza en este orden.
     await replaceBusinessRows('sale_material_usage',[]);
-    const saleItems=state.sales.map(s=>({id:s.id,user_id:uid,sale_id:s.id,product_id:s.productId||null,product_name:s.productName||getProduct(s.productId)?.name||'Producto',quantity:Math.max(1,Math.round(num(s.quantity)||1)),unit_price:num(s.unitPrice),unit_cost:num(s.unitCost)}));
+    const saleItems=[];state.sales.forEach(s=>normalizedSaleItems(s).forEach(i=>saleItems.push({id:i.id,user_id:uid,sale_id:s.id,product_id:i.productId||null,product_name:i.productName||getProduct(i.productId)?.name||'Producto',quantity:Math.max(1,Math.round(num(i.quantity)||1)),unit_price:num(i.unitPrice),unit_cost:num(i.unitCost)})));
     await replaceBusinessRows('sale_items',saleItems);
     const usages=[];
-    state.sales.forEach(s=>(s.consumption||[]).forEach(u=>usages.push({user_id:uid,sale_item_id:s.id,material_id:u.materialId||null,material_name:u.materialName||getMaterial(u.materialId)?.name||'Material',quantity_used:num(u.quantity),unit_cost:num(u.unitCost)||materialUnitCost(getMaterial(u.materialId))})));
+    state.sales.forEach(s=>normalizedSaleItems(s).forEach(i=>{const itemUsage=i.consumption?.length?i.consumption:(normalizedSaleItems(s).length===1?s.consumption||[]:[]);itemUsage.forEach(u=>usages.push({user_id:uid,sale_item_id:i.id,material_id:u.materialId||null,material_name:u.materialName||getMaterial(u.materialId)?.name||'Material',quantity_used:num(u.quantity),unit_cost:num(u.unitCost)||materialUnitCost(getMaterial(u.materialId))}))}));
     if (usages.length){
       const {error}=await cloud.client.from('sale_material_usage').insert(usages);
       if(error) throw new Error(`sale_material_usage: ${error.message}`);
