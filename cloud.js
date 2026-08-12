@@ -1,6 +1,6 @@
 /*
   M&N Gift — conexión Supabase
-  Versión de desarrollo: V.MN.0.0.007
+  Versión de desarrollo: V.MN.0.0.008
   Esta clave es PUBLISHABLE y puede vivir en el frontend.
   Nunca incluir service_role o sb_secret_ en este archivo.
 */
@@ -66,7 +66,7 @@ function updateSyncDetails(){
 }
 
 const remoteStampTables = [
-  'categories','suppliers','materials','products','product_materials','purchases','expenses','clients','orders','sales','payments','cash_closures','inventory_movements','production_jobs','production_reservations'
+  'categories','suppliers','materials','products','product_materials','purchases','expenses','clients','orders','sales','payments','cash_closures','accounts_payable','accounts_receivable','cash_adjustments','inventory_movements','production_jobs','production_reservations'
 ];
 
 async function getRemoteChangeStamp(){
@@ -145,7 +145,7 @@ function updateIdentityUI(){
 }
 
 function localBusinessHasData(){
-  return ['materials','products','sales','purchases','expenses','customers','orders','suppliers','inventoryMovements','productionJobs','productionReservations','customCategories']
+  return ['materials','products','sales','purchases','expenses','customers','orders','accountsPayable','accountsReceivable','cashAdjustments','suppliers','inventoryMovements','productionJobs','productionReservations','customCategories']
     .some(k => Array.isArray(state[k]) && state[k].length > 0);
 }
 
@@ -153,7 +153,7 @@ function emergencyLocalSnapshot(label='precloud'){
   try {
     localStorage.setItem(`mngifts_${label}_backup`, JSON.stringify({
       exportedAt: new Date().toISOString(),
-      version: 'V.MN.0.0.007',
+      version: 'V.MN.0.0.008',
       data: {
         materials: state.materials,
         products: state.products,
@@ -164,6 +164,9 @@ function emergencyLocalSnapshot(label='precloud'){
         orders: state.orders,
         payments: state.payments,
         cashClosures: state.cashClosures,
+        accountsPayable: state.accountsPayable,
+        accountsReceivable: state.accountsReceivable,
+        cashAdjustments: state.cashAdjustments,
         suppliers: state.suppliers,
         inventoryMovements: state.inventoryMovements,
         productionJobs: state.productionJobs,
@@ -230,14 +233,14 @@ async function fetchBusiness(table){
 async function fetchCloudBundle(){
   const tables = [
     'categories','suppliers','materials','products','product_materials','purchases','expenses',
-    'clients','orders','order_items','sales','sale_items','sale_material_usage','payments','cash_closures','inventory_movements','production_jobs','production_reservations'
+    'clients','orders','order_items','sales','sale_items','sale_material_usage','payments','cash_closures','accounts_payable','accounts_receivable','cash_adjustments','inventory_movements','production_jobs','production_reservations'
   ];
   const values = await Promise.all(tables.map(fetchBusiness));
   return Object.fromEntries(tables.map((t,i)=>[t,values[i]]));
 }
 
 function cloudBundleHasData(b){
-  return ['materials','products','purchases','expenses','clients','orders','sales','payments','cash_closures','suppliers','inventory_movements','production_jobs','production_reservations'].some(k => (b[k]||[]).length);
+  return ['materials','products','purchases','expenses','clients','orders','sales','payments','cash_closures','accounts_payable','accounts_receivable','cash_adjustments','suppliers','inventory_movements','production_jobs','production_reservations'].some(k => (b[k]||[]).length);
 }
 
 function applyCloudBundle(b){
@@ -324,6 +327,9 @@ function applyCloudBundle(b){
 
   state.payments=(b.payments||[]).map(p=>({id:p.id,orderId:p.order_id||null,saleId:p.sale_id||null,date:p.payment_date,amount:num(p.amount),method:p.method||'Otro',kind:p.kind||'Pago',note:p.notes||''}));
   state.cashClosures=(b.cash_closures||[]).map(x=>({id:x.id,date:x.closure_date,openingCash:num(x.opening_cash),expectedCash:num(x.expected_cash),countedCash:num(x.counted_cash),difference:num(x.difference),notes:x.notes||'',closedAt:x.closed_at||x.updated_at||x.created_at}));
+  state.accountsPayable=(b.accounts_payable||[]).map(x=>({id:x.id,creditor:x.creditor||'',concept:x.concept||'',amount:num(x.amount),dueDate:x.due_date,status:x.status||'Pendiente',plannedMethod:x.planned_method||'Otro',paidDate:x.paid_date||null,paidMethod:x.paid_method||null,notes:x.notes||'',expenseId:x.expense_id||null,createdAt:x.created_at||null}));
+  state.accountsReceivable=(b.accounts_receivable||[]).map(x=>({id:x.id,debtor:x.debtor||'',concept:x.concept||'',amount:num(x.amount),dueDate:x.due_date,status:x.status||'Pendiente',plannedMethod:x.planned_method||'Otro',notes:x.notes||'',collections:Array.isArray(x.collections)?x.collections:[],createdAt:x.created_at||null}));
+  state.cashAdjustments=(b.cash_adjustments||[]).map(x=>({id:x.id,type:x.movement_type==='Egreso'?'Egreso':'Ingreso',date:x.movement_date,amount:num(x.amount),method:x.method||'Otro',concept:x.concept||'',reason:x.reason||'',notes:x.notes||'',createdAt:x.created_at||null}));
   state.inventoryMovements=(b.inventory_movements||[]).map(x=>({id:x.id,materialId:x.material_id||'',materialName:x.material_name||materialName(x.material_id),unit:x.unit||materialUnit(x.material_id),date:x.movement_date,kind:x.movement_type,delta:num(x.quantity_delta),unitCost:num(x.unit_cost),note:x.notes||'',sourceType:x.source_type||'adjustment',sourceId:x.source_id||null,stockAfter:x.stock_after===null?null:num(x.stock_after)}));
   state.productionJobs=(b.production_jobs||[]).map(x=>({id:x.id,orderId:x.order_id,scheduledDate:x.scheduled_date,status:x.status||'Pendiente',notes:x.notes||'',createdAt:x.created_at,updatedAt:x.updated_at,completedAt:x.completed_at||null}));
   state.productionReservations=(b.production_reservations||[]).map(x=>({id:x.id,productionJobId:x.production_job_id,orderId:x.order_id,materialId:x.material_id||'',materialName:x.material_name||materialName(x.material_id),unit:x.unit||materialUnit(x.material_id),quantity:num(x.quantity_required),unitCost:num(x.unit_cost)}));
@@ -532,6 +538,9 @@ async function syncAllToCloud(force=false){
     const purchases=state.purchases.map(x=>({id:x.id,user_id:uid,material_id:x.materialId,purchase_date:x.date||todayISO(),quantity:num(x.quantity),total_cost:num(x.cost),payment_method:x.paymentMethod||'Otro',supplier_id:x.supplierId||null,supplier:getSupplier(x.supplierId)?.name||null,notes:x.note||null}));
     const payments=state.payments.map(p=>({id:p.id,user_id:uid,order_id:p.orderId||null,sale_id:p.saleId||null,payment_date:p.date||todayISO(),amount:num(p.amount),method:p.method||'Otro',kind:p.kind||'Pago',notes:p.note||null}));
     const cashClosures=state.cashClosures.map(x=>({id:x.id,user_id:uid,closure_date:x.date||todayISO(),opening_cash:num(x.openingCash),expected_cash:num(x.expectedCash),counted_cash:num(x.countedCash),difference:num(x.difference),notes:x.notes||null,closed_at:x.closedAt||new Date().toISOString()}));
+    const accountsPayable=state.accountsPayable.map(x=>({id:x.id,user_id:uid,creditor:x.creditor,concept:x.concept,amount:num(x.amount),due_date:x.dueDate||todayISO(),status:x.status||'Pendiente',planned_method:x.plannedMethod||'Otro',paid_date:x.paidDate||null,paid_method:x.paidMethod||null,notes:x.notes||null,expense_id:x.expenseId||null}));
+    const accountsReceivable=state.accountsReceivable.map(x=>({id:x.id,user_id:uid,debtor:x.debtor,concept:x.concept,amount:num(x.amount),due_date:x.dueDate||todayISO(),status:receivableStatus(x),planned_method:x.plannedMethod||'Otro',notes:x.notes||null,collections:Array.isArray(x.collections)?x.collections:[]}));
+    const cashAdjustments=state.cashAdjustments.map(x=>({id:x.id,user_id:uid,movement_date:x.date||todayISO(),movement_type:x.type==='Egreso'?'Egreso':'Ingreso',amount:num(x.amount),method:x.method||'Otro',concept:x.concept,reason:x.reason,notes:x.notes||null}));
     const inventoryMovements=state.inventoryMovements.map(x=>({id:x.id,user_id:uid,material_id:x.materialId||null,material_name:x.materialName||getMaterial(x.materialId)?.name||'Material',unit:x.unit||getMaterial(x.materialId)?.unit||'',movement_date:x.date||todayISO(),movement_type:x.kind||'adjustment',quantity_delta:num(x.delta),unit_cost:num(x.unitCost),stock_after:x.stockAfter===null||x.stockAfter===undefined?null:num(x.stockAfter),source_type:x.sourceType||'adjustment',source_id:x.sourceId||null,notes:x.note||null}));
     const productionJobs=state.productionJobs.map(j=>({id:j.id,user_id:uid,order_id:j.orderId,scheduled_date:j.scheduledDate||getOrder(j.orderId)?.deliveryDate||todayISO(),status:j.status||'Pendiente',notes:j.notes||null,completed_at:j.completedAt||null}));
     const productionReservations=state.productionReservations.map(r=>({id:r.id,user_id:uid,production_job_id:r.productionJobId,order_id:r.orderId||getProductionJob(r.productionJobId)?.orderId,material_id:r.materialId||null,material_name:r.materialName||getMaterial(r.materialId)?.name||'Material',unit:r.unit||getMaterial(r.materialId)?.unit||'',quantity_required:num(r.quantity),unit_cost:num(r.unitCost)}));
@@ -547,6 +556,9 @@ async function syncAllToCloud(force=false){
     await upsertRows('purchases',purchases);
     await upsertRows('payments',payments);
     await upsertRows('cash_closures',cashClosures);
+    await upsertRows('accounts_payable',accountsPayable);
+    await upsertRows('accounts_receivable',accountsReceivable);
+    await upsertRows('cash_adjustments',cashAdjustments);
     await upsertRows('inventory_movements',inventoryMovements);
     await upsertRows('production_jobs',productionJobs);
     await upsertRows('production_reservations',productionReservations);
@@ -572,6 +584,9 @@ async function syncAllToCloud(force=false){
     // Eliminar registros que ya no existen localmente (después de actualizar hijos).
     await deleteMissing('payments',payments.map(x=>x.id));
     await deleteMissing('cash_closures',cashClosures.map(x=>x.id));
+    await deleteMissing('accounts_payable',accountsPayable.map(x=>x.id));
+    await deleteMissing('accounts_receivable',accountsReceivable.map(x=>x.id));
+    await deleteMissing('cash_adjustments',cashAdjustments.map(x=>x.id));
     await deleteMissing('inventory_movements',inventoryMovements.map(x=>x.id));
     await deleteMissing('production_reservations',productionReservations.map(x=>x.id));
     await deleteMissing('production_jobs',productionJobs.map(x=>x.id));

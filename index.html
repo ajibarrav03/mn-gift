@@ -27,7 +27,7 @@
   <div class="auth-screen" id="authScreen">
     <div class="auth-card">
       <img src="logo-mn-gift.png" alt="Logo de M&N Gift" class="auth-logo" />
-      <div class="auth-heading"><h1>M&N Gift</h1><p>Control de negocio · V.MN.0.0.007</p></div>
+      <div class="auth-heading"><h1>M&N Gift</h1><p>Control de negocio · V.MN.0.0.008</p></div>
       <form id="loginForm" class="auth-form">
         <label>Correo electrónico<input id="loginEmail" type="email" autocomplete="username" required placeholder="tu@correo.com" /></label>
         <label>Contraseña<input id="loginPassword" type="password" autocomplete="current-password" required placeholder="••••••••" /></label>
@@ -66,7 +66,7 @@
         <button class="nav-btn admin-only" id="usersNavBtn" data-section="users" hidden>👑 <span>Usuarios</span></button>
         <button class="nav-btn" data-section="settings">⚙️ <span>Configuración</span></button>
       </nav>
-      <div class="sidebar-footer"><small>Moneda: COP 🇨🇴</small><small class="version-tag">V.MN.0.0.007</small></div>
+      <div class="sidebar-footer"><small>Moneda: COP 🇨🇴</small><small class="version-tag">V.MN.0.0.008</small></div>
     </aside>
 
     <main class="main-content">
@@ -451,8 +451,8 @@
             <div class="empty-state small" id="reportMaterialsEmpty"><p>No hay consumo de materiales en este periodo.</p></div>
           </article>
           <article class="panel table-panel">
-            <div class="panel-header"><div><h3>Cuentas por cobrar</h3><p>Pedidos activos con saldo pendiente.</p></div></div>
-            <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Entrega</th><th>Total</th><th>Pagado</th><th>Saldo</th></tr></thead><tbody id="receivablesTable"></tbody></table></div>
+            <div class="panel-header"><div><h3>Cuentas por cobrar</h3><p>Pedidos activos y otras cuentas registradas con saldo pendiente.</p></div></div>
+            <div class="table-wrap"><table><thead><tr><th>Cliente / deudor</th><th>Entrega / vencimiento</th><th>Total</th><th>Pagado</th><th>Saldo</th></tr></thead><tbody id="receivablesTable"></tbody></table></div>
             <div class="empty-state small" id="receivablesEmpty"><p>No hay saldos pendientes.</p></div>
           </article>
         </div>
@@ -461,6 +461,105 @@
 
       <section class="page-section" id="cash">
         <div class="section-heading"><div><h3>Caja y movimientos</h3><p>Controla todos los ingresos y egresos del negocio y realiza el cierre del efectivo diario.</p></div></div>
+
+        <article class="panel cash-actions-panel">
+          <div class="panel-header"><div><h3>Acciones de caja</h3><p>Selecciona una opción. El formulario se mostrará aquí mismo sin salir de Caja.</p></div></div>
+          <div class="cash-action-buttons">
+            <button class="primary-btn cash-action-btn" id="calculateEmployeePayAvailable" type="button">💰 Ver monto disponible</button>
+            <button class="primary-btn cash-action-btn" id="openPayableModal" type="button">+ Agregar cuenta por pagar</button>
+            <button class="primary-btn cash-action-btn" id="openReceivableModal" type="button">+ Agregar cuenta por cobrar</button>
+            <button class="primary-btn cash-action-btn" id="openCashAdjustmentModal" type="button">↕ Registrar ajuste</button>
+          </div>
+
+          <div class="cash-action-workspace" id="cashActionWorkspace">
+            <div class="cash-inline-panel" id="employeePayInlinePanel" hidden>
+              <div class="cash-inline-heading"><div><h4>Disponible para pagar a empleados</h4><p>El máximo acumulado para nómina no puede superar el 90% de la ganancia neta disponible.</p></div><button class="small-btn" type="button" data-close-cash-inline>Ocultar</button></div>
+              <div class="employee-pay-result" id="employeePayAvailabilityResult"></div>
+            </div>
+
+            <div class="cash-inline-panel" id="payableInlinePanel" hidden>
+              <div class="cash-inline-heading"><div><h4 id="payableModalTitle">Agregar cuenta por pagar</h4><p>La cuenta queda pendiente. El egreso se registra en Movimientos de caja al presionar <strong>Pagar</strong>.</p></div><button class="small-btn" type="button" data-close-cash-inline>Cancelar</button></div>
+              <form id="payableForm">
+                <label>Acreedor / persona / proveedor<input name="creditor" required placeholder="Ej: Proveedor de cajas" /></label>
+                <label>Concepto<input name="concept" required placeholder="Ej: Compra de empaques pendiente" /></label>
+                <div class="form-grid">
+                  <label>Monto (COP)<input name="amount" type="number" min="1" step="1" required /></label>
+                  <label>Fecha de vencimiento<input name="dueDate" type="date" required /></label>
+                </div>
+                <label>Método previsto de pago<select name="plannedMethod" required><option>Efectivo</option><option>Nequi</option><option>Daviplata</option><option>Transferencia bancaria</option><option>Tarjeta</option><option>Otro</option></select></label>
+                <label>Notas <span class="optional">(opcional)</span><textarea name="notes" rows="2" placeholder="Datos o condiciones del pago"></textarea></label>
+                <button class="primary-btn full" id="payableSubmitBtn" type="submit">Guardar cuenta por pagar</button>
+              </form>
+            </div>
+
+            <div class="cash-inline-panel" id="receivableInlinePanel" hidden>
+              <div class="cash-inline-heading"><div><h4 id="receivableModalTitle">Agregar cuenta por cobrar</h4><p>La cuenta queda pendiente. El ingreso se registra en Movimientos de caja cuando se use <strong>Cobrar</strong>.</p></div><button class="small-btn" type="button" data-close-cash-inline>Cancelar</button></div>
+              <form id="receivableForm">
+                <label>Deudor / cliente / persona<input name="debtor" required placeholder="Ej: Cliente corporativo" /></label>
+                <label>Concepto<input name="concept" required placeholder="Ej: Saldo por decoración de evento" /></label>
+                <div class="form-grid">
+                  <label>Monto total (COP)<input name="amount" type="number" min="1" step="1" required /></label>
+                  <label>Fecha de vencimiento<input name="dueDate" type="date" required /></label>
+                </div>
+                <label>Método previsto de cobro<select name="plannedMethod" required><option>Efectivo</option><option>Nequi</option><option>Daviplata</option><option>Transferencia bancaria</option><option>Tarjeta</option><option>Otro</option></select></label>
+                <label>Notas <span class="optional">(opcional)</span><textarea name="notes" rows="2" placeholder="Condiciones o información adicional"></textarea></label>
+                <button class="primary-btn full" id="receivableSubmitBtn" type="submit">Guardar cuenta por cobrar</button>
+              </form>
+            </div>
+
+            <div class="cash-inline-panel" id="cashAdjustmentInlinePanel" hidden>
+              <div class="cash-inline-heading"><div><h4 id="cashAdjustmentModalTitle">Registrar ajuste de caja</h4><p>Al guardar, el ingreso o egreso aparecerá inmediatamente en Movimientos de caja.</p></div><button class="small-btn" type="button" data-close-cash-inline>Cancelar</button></div>
+              <form id="cashAdjustmentForm">
+                <div class="form-grid">
+                  <label>Tipo de ajuste<select name="type" required><option>Ingreso</option><option>Egreso</option></select></label>
+                  <label>Fecha<input name="date" type="date" required /></label>
+                </div>
+                <div class="form-grid">
+                  <label>Monto (COP)<input name="amount" type="number" min="1" step="1" required /></label>
+                  <label>Método<select name="method" required><option>Efectivo</option><option>Nequi</option><option>Daviplata</option><option>Transferencia bancaria</option><option>Tarjeta</option><option>Otro</option></select></label>
+                </div>
+                <label>Concepto<input name="concept" required placeholder="Ej: Corrección de saldo de caja" /></label>
+                <label>Motivo del ajuste<input name="reason" required placeholder="Ej: Diferencia detectada en conciliación" /></label>
+                <label>Notas <span class="optional">(opcional)</span><textarea name="notes" rows="2"></textarea></label>
+                <div class="order-money-preview">Este movimiento quedará identificado como <strong>Ajuste de caja</strong> y se sumará o restará inmediatamente en Movimientos de caja.</div>
+                <button class="primary-btn full" id="cashAdjustmentSubmitBtn" type="submit">Guardar ajuste</button>
+              </form>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel table-panel accounts-payable-panel">
+          <div class="panel-header">
+            <div><h3>Cuentas por pagar</h3><p>Registra compromisos pendientes. Solo se convierten en egreso cuando se marcan como pagados.</p></div>
+          </div>
+          <div class="cash-close-kpis accounts-payable-kpis">
+            <div><span>Total pendiente</span><strong id="accountsPayablePending">$ 0</strong></div>
+            <div><span>Total vencido</span><strong class="expense-amount" id="accountsPayableOverdue">$ 0</strong></div>
+          </div>
+          <div class="table-wrap"><table><thead><tr><th>Vencimiento</th><th>Acreedor</th><th>Concepto</th><th>Monto</th><th>Método</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="accountsPayableTable"></tbody></table></div>
+          <div class="empty-state small" id="accountsPayableEmpty"><p>No hay cuentas por pagar registradas.</p></div>
+        </article>
+
+        <article class="panel table-panel accounts-receivable-panel">
+          <div class="panel-header">
+            <div><h3>Cuentas por cobrar</h3><p>Registra dinero pendiente de terceros que no esté ya incluido en Pedidos. Los cobros parciales o totales aparecen automáticamente en Caja.</p></div>
+          </div>
+          <div class="cash-close-kpis accounts-receivable-kpis">
+            <div><span>Total pendiente</span><strong id="accountsReceivablePending">$ 0</strong></div>
+            <div><span>Total vencido</span><strong class="expense-amount" id="accountsReceivableOverdue">$ 0</strong></div>
+            <div><span>Total cobrado</span><strong class="profit" id="accountsReceivableCollected">$ 0</strong></div>
+          </div>
+          <div class="table-wrap"><table><thead><tr><th>Vencimiento</th><th>Deudor</th><th>Concepto</th><th>Total</th><th>Cobrado</th><th>Saldo</th><th>Método</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="accountsReceivableTable"></tbody></table></div>
+          <div class="empty-state small" id="accountsReceivableEmpty"><p>No hay cuentas por cobrar registradas.</p></div>
+        </article>
+
+        <article class="panel table-panel cash-adjustments-panel">
+          <div class="panel-header">
+            <div><h3>Ajustes de ingresos / egresos</h3><p>Registra correcciones manuales de Caja sin crear ventas, compras o gastos ficticios. Los ajustes afectan Caja y el cierre de efectivo, pero no la ganancia operativa.</p></div>
+          </div>
+          <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Concepto / motivo</th><th>Método</th><th>Monto</th><th>Acciones</th></tr></thead><tbody id="cashAdjustmentsTable"></tbody></table></div>
+          <div class="empty-state small" id="cashAdjustmentsEmpty"><p>No hay ajustes de caja registrados.</p></div>
+        </article>
 
         <article class="panel table-panel cash-movements-panel">
           <div class="panel-header">
@@ -840,6 +939,38 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="payablePaymentModal">
+    <div class="modal">
+      <div class="modal-header"><h3>Pagar cuenta pendiente</h3><button class="close-modal" data-close="payablePaymentModal">×</button></div>
+      <form id="payablePaymentForm">
+        <input type="hidden" name="payableId" />
+        <div class="order-payment-target" id="payablePaymentTarget"></div>
+        <div class="form-grid">
+          <label>Fecha de pago<input name="date" type="date" required /></label>
+          <label>Método de pago<select name="method" required><option>Efectivo</option><option>Nequi</option><option>Daviplata</option><option>Transferencia bancaria</option><option>Tarjeta</option><option>Otro</option></select></label>
+        </div>
+        <button class="primary-btn full" type="submit">Confirmar pago</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="receivableCollectionModal">
+    <div class="modal">
+      <div class="modal-header"><h3>Registrar cobro</h3><button class="close-modal" data-close="receivableCollectionModal">×</button></div>
+      <form id="receivableCollectionForm">
+        <input type="hidden" name="receivableId" />
+        <div class="order-payment-target" id="receivableCollectionTarget"></div>
+        <div class="form-grid">
+          <label>Monto recibido (COP)<input name="amount" type="number" min="1" step="1" required /></label>
+          <label>Fecha de cobro<input name="date" type="date" required /></label>
+        </div>
+        <label>Método de cobro<select name="method" required><option>Efectivo</option><option>Nequi</option><option>Daviplata</option><option>Transferencia bancaria</option><option>Tarjeta</option><option>Otro</option></select></label>
+        <label>Nota <span class="optional">(opcional)</span><input name="note" placeholder="Ej: Primer abono" /></label>
+        <button class="primary-btn full" type="submit">Guardar cobro</button>
+      </form>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="expenseModal">
     <div class="modal">
       <div class="modal-header"><h3 id="expenseModalTitle">Registrar gasto</h3><button class="close-modal" data-close="expenseModal">×</button></div>
@@ -853,6 +984,7 @@
             <option value="Herramientas">Herramientas</option>
             <option value="Comisiones">Comisiones</option>
             <option value="Pago a empleados">Pago a empleados</option>
+            <option value="Cuenta por pagar">Cuenta por pagar</option>
             <option value="Empaque general">Empaque general</option>
             <option value="Otros">Otros</option>
           </select>

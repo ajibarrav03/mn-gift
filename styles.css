@@ -58,13 +58,13 @@ td small{color:var(--muted)}
 @media(max-width:620px){.report-kpis{grid-template-columns:1fr}.action-btn.convert{width:100%}}
 
 
-/* ===== V.MN.0.0.007: respaldo e instalación PWA ===== */
+/* ===== V.MN.0.0.008: respaldo e instalación PWA ===== */
 .settings-grid{align-items:stretch}.settings-actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.file-btn{display:inline-flex;align-items:center;justify-content:center;cursor:pointer}.data-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.data-summary>div{background:var(--surface-soft);border-radius:12px;padding:12px}.data-summary span{display:block;color:var(--muted);font-size:12px}.data-summary strong{display:block;margin-top:4px}.data-summary .wide{grid-column:1/-1}.install-box{display:grid;gap:16px;margin-top:18px}.install-status{display:flex;align-items:center;gap:11px;padding:13px;background:var(--surface-soft);border-radius:12px}.install-status strong,.install-status small{display:block}.install-status small{color:var(--muted);margin-top:3px;line-height:1.35}.connection-dot{width:12px;height:12px;border-radius:50%;background:var(--success);box-shadow:0 0 0 4px rgba(45,132,87,.12);flex:0 0 auto}.connection-dot.offline{background:var(--danger);box-shadow:0 0 0 4px rgba(183,63,63,.1)}.danger-zone{margin-top:18px;border-color:#f0caca}.danger-row{display:flex;justify-content:space-between;gap:20px;align-items:center}.danger-row p{margin:5px 0 0;color:var(--muted);font-size:13px}.danger-btn{border:1px solid #efcaca;background:#fff5f5;color:var(--danger);border-radius:12px;padding:11px 14px;font-weight:750}.primary-btn:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:620px){.settings-actions{display:grid}.settings-actions>*{width:100%}.data-summary{grid-template-columns:1fr}.data-summary .wide{grid-column:auto}.danger-row{align-items:stretch;flex-direction:column}.danger-btn{width:100%}}
 
 @media(max-width:760px){.brand-logo-wrap{width:66px;height:76px}}
 
-/* ===== Supabase / autenticación (V.MN.0.0.007 en desarrollo) ===== */
+/* ===== Supabase / autenticación (V.MN.0.0.008 en desarrollo) ===== */
 .auth-locked{display:none!important}
 .auth-screen{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 20% 10%,#fff 0,#fff9fb 34%,#f4e6eb 100%)}
 .auth-screen.hidden{display:none}
@@ -86,12 +86,12 @@ td small{color:var(--muted)}
 .section-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.admin-audit-panel{margin-top:18px}.password-inline{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.secondary-btn.compact{padding:10px 12px;white-space:nowrap}.check-row{display:flex!important;align-items:flex-start;gap:9px;font-size:13px;color:var(--muted);line-height:1.4}.check-row input{width:auto;margin-top:3px}.admin-target{padding:11px 12px;border-radius:11px;background:var(--surface-soft);color:var(--muted);font-size:13px;margin-bottom:12px}.admin-target strong{color:var(--text)}.user-action-stack{display:flex;gap:6px;flex-wrap:wrap}.action-btn.warning{color:var(--warning);background:#fff9ed;border-color:#f0dfb8}.action-btn.danger-solid{color:#fff;background:var(--danger);border-color:var(--danger)}.admin-audit-detail{max-width:360px;white-space:normal;line-height:1.35}.forced-password-note{padding:10px 12px;margin-bottom:12px;border-radius:11px;background:#fff8e8;color:#7a5a20;font-size:13px;line-height:1.45}.modal-backdrop.password-forced .modal{box-shadow:0 0 0 4px rgba(154,106,39,.15),var(--shadow)}
 @media(max-width:620px){.section-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}.password-inline{grid-template-columns:1fr}.secondary-btn.compact{width:100%}.user-action-stack .action-btn{flex:1 1 46%}}
 
-/* Permisos por rol — V.MN.0.0.007 */
+/* Permisos por rol — V.MN.0.0.008 */
 .permission-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.permission-grid>div{padding:14px;border:1px solid var(--border);border-radius:14px;background:var(--surface-soft,#faf8f4)}.permission-grid strong{display:block;margin-bottom:5px}.permission-grid p{margin:0;color:var(--muted);font-size:.9rem;line-height:1.45}.role-access-panel{margin-bottom:18px}@media(max-width:760px){.permission-grid{grid-template-columns:1fr}}
 
 .role-hidden{display:none!important}
 
-/* ===== Experiencia móvil (desarrollo sobre V.MN.0.0.007) ===== */
+/* ===== Experiencia móvil (desarrollo sobre V.MN.0.0.008) ===== */
 html{scroll-behavior:smooth}
 body{min-height:100dvh}
 .sidebar-mobile-close,.mobile-bottom-nav,.mobile-nav-backdrop,.mobile-install-banner{display:none}
@@ -212,7 +212,7 @@ body{min-height:100dvh}
 }
 
 
-/* ===== Bloque: alertas, carga y modo offline — desarrollo sobre V.MN.0.0.007 ===== */
+/* ===== Bloque: alertas, carga y modo offline — desarrollo sobre V.MN.0.0.008 ===== */
 .app-splash{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:linear-gradient(180deg,#fffafb,#f9eef2);transition:opacity .3s ease,visibility .3s ease}.app-splash.leaving{opacity:0;visibility:hidden}.app-splash-card{display:grid;place-items:center;text-align:center;gap:7px}.app-splash-logo{width:150px;height:180px;object-fit:contain;filter:drop-shadow(0 12px 24px rgba(71,38,51,.12))}.app-splash-card strong{font-size:23px;color:var(--primary-dark)}.app-splash-card span{font-size:13px;color:var(--muted)}.app-splash-spinner{width:32px;height:32px;border:3px solid #eadce1;border-top-color:var(--primary);border-radius:50%;animation:mnSpin .8s linear infinite}@keyframes mnSpin{to{transform:rotate(360deg)}}
 .offline-banner{position:fixed;z-index:80;left:50%;top:12px;transform:translateX(-50%);max-width:min(680px,calc(100% - 24px));display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:14px;background:#4d3540;color:#fff;box-shadow:0 12px 34px rgba(41,24,31,.22)}.offline-banner[hidden]{display:none!important}.offline-banner-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:rgba(255,255,255,.12)}.offline-banner strong,.offline-banner small{display:block}.offline-banner strong{font-size:13px}.offline-banner small{margin-top:2px;color:rgba(255,255,255,.72);font-size:11px;line-height:1.35}
 .alerts-control{position:relative}.alerts-bell{position:relative;width:42px;height:42px;border:1px solid var(--border);border-radius:13px;background:#fff;display:grid;place-items:center;font-size:18px}.alerts-bell:hover{background:var(--surface-soft)}.alerts-bell b{position:absolute;right:-5px;top:-5px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font-size:10px;display:grid;place-items:center;border:2px solid #fff}.alerts-bell b[hidden]{display:none!important}.alerts-popover{position:absolute;z-index:90;right:0;top:50px;width:min(390px,calc(100vw - 24px));max-height:min(560px,75vh);overflow:auto;background:#fff;border:1px solid var(--border);border-radius:17px;box-shadow:0 22px 60px rgba(61,35,45,.2);padding:10px}.alerts-popover[hidden]{display:none!important}.alerts-popover-head{display:flex;align-items:center;justify-content:space-between;padding:6px 6px 10px}.alerts-popover-head strong,.alerts-popover-head span{display:block}.alerts-popover-head span{font-size:11px;color:var(--muted);margin-top:2px}.alerts-popover-head button{width:34px;height:34px;border:0;border-radius:10px;background:var(--surface-soft);color:var(--muted);font-size:20px}.alerts-popover-list,.business-alerts-list{display:grid;gap:8px}.business-alerts-panel{margin-bottom:18px}.alerts-panel-header{display:flex;align-items:center;justify-content:space-between;gap:12px}.alerts-total-pill{white-space:nowrap;padding:7px 10px;border-radius:999px;background:var(--surface-soft);color:var(--primary);font-size:12px;font-weight:800}.business-alert-item{width:100%;border:1px solid var(--border);background:#fff;border-radius:14px;padding:11px 12px;display:grid;grid-template-columns:38px 1fr auto;align-items:center;gap:10px;text-align:left;color:var(--text)}.business-alert-item:hover{background:#fffafb}.business-alert-item.critical{border-left:4px solid var(--danger)}.business-alert-item.warning{border-left:4px solid #d49a3d}.business-alert-item.info{border-left:4px solid #6688a6}.business-alert-icon{width:38px;height:38px;border-radius:11px;background:var(--surface-soft);display:grid;place-items:center;font-size:18px}.business-alert-copy strong,.business-alert-copy small{display:block}.business-alert-copy strong{font-size:13px}.business-alert-copy small{margin-top:3px;font-size:11px;color:var(--muted);line-height:1.35}.business-alert-arrow{font-size:25px;color:var(--muted)}.business-alert-item.compact{border-radius:12px;padding:9px}.business-alerts-empty{display:flex;align-items:center;gap:10px;padding:14px;border-radius:13px;background:#eef8f2;color:var(--success)}.business-alerts-empty>span{font-size:20px}.business-alerts-empty strong,.business-alerts-empty small{display:block}.business-alerts-empty small{margin-top:2px;font-size:11px;color:var(--muted)}
@@ -220,7 +220,7 @@ body{min-height:100dvh}
 @media(max-width:760px){.app-splash-logo{width:132px;height:158px}.offline-banner{top:calc(8px + env(safe-area-inset-top));left:8px;right:8px;max-width:none;transform:none}.alerts-popover{position:fixed;left:10px;right:10px;top:auto;bottom:calc(var(--mobile-nav-h) + 14px + env(safe-area-inset-bottom));width:auto;max-height:64dvh}.business-alerts-panel{padding:14px}.alerts-panel-header{align-items:flex-start}.alerts-total-pill{font-size:11px}.business-alert-item{grid-template-columns:36px 1fr auto;padding:10px}.business-alert-icon{width:36px;height:36px}.topbar-actions .alerts-control{order:-1}}
 
 
-/* Bloque financiero avanzado (desarrollo sobre V.MN.0.0.007) */
+/* Bloque financiero avanzado (desarrollo sobre V.MN.0.0.008) */
 .finance-report-extras{display:block}.report-shortcuts{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}.report-kpis-expanded{grid-template-columns:repeat(7,minmax(140px,1fr))}.finance-advanced-grid{margin-top:16px}.month-comparison{display:grid;gap:8px}.comparison-row{display:grid;grid-template-columns:minmax(110px,1fr) repeat(2,minmax(90px,1fr)) minmax(72px,.7fr);gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid #eadfe3}.comparison-row:last-child{border-bottom:0}.comparison-row strong{text-align:right}.comparison-delta{font-weight:800;text-align:right}.comparison-delta.up{color:#257a50}.comparison-delta.down{color:#b04747}.payment-bars{display:grid;gap:12px}.payment-bar-row{display:grid;grid-template-columns:130px 1fr auto;gap:10px;align-items:center}.payment-bar-track{height:12px;border-radius:999px;background:#eee6e9;overflow:hidden}.payment-bar-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,#7a3e52,#b76b83);min-width:2px}.cash-close-panel{display:grid;gap:18px}.cash-close-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.cash-close-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.cash-close-kpis>div{padding:14px;border-radius:14px;background:#faf6f7;border:1px solid #eadfe3;display:grid;gap:5px}.cash-close-kpis span{font-size:.82rem;color:#76666b}.cash-close-kpis strong{font-size:1.15rem}.cash-close-difference.positive strong{color:#257a50}.cash-close-difference.negative strong{color:#b04747}.payment-method-pill{display:inline-flex;padding:5px 9px;border-radius:999px;background:#f4ecef;font-size:.78rem;font-weight:750}.row-actions .payment{background:#f0e8ff;color:#61419a}.receivable-overdue{color:#b04747;font-weight:750}
 @media(max-width:1000px){.report-kpis-expanded{grid-template-columns:repeat(3,minmax(140px,1fr))}.cash-close-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.report-shortcuts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.report-shortcuts button{width:100%}.report-kpis-expanded{grid-template-columns:repeat(2,minmax(0,1fr))}.cash-close-form-grid,.cash-close-kpis{grid-template-columns:1fr 1fr}.payment-bar-row{grid-template-columns:95px 1fr}.payment-bar-row strong{grid-column:2;text-align:right}.comparison-row{grid-template-columns:1fr 1fr}.finance-advanced-grid{grid-template-columns:1fr}}
@@ -229,7 +229,7 @@ body{min-height:100dvh}
 
 
 /* ============================================================
-   INVENTARIO AVANZADO — desarrollo sobre V.MN.0.0.007
+   INVENTARIO AVANZADO — desarrollo sobre V.MN.0.0.008
    ============================================================ */
 .section-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .inventory-kpis{margin-bottom:18px}
@@ -249,7 +249,7 @@ body{min-height:100dvh}
 
 
 /* ============================================================
-   BLOQUE PRODUCCIÓN Y PLANIFICACIÓN — desarrollo V.MN.0.0.007
+   BLOQUE PRODUCCIÓN Y PLANIFICACIÓN — desarrollo V.MN.0.0.008
    ============================================================ */
 .production-kpis{margin-bottom:18px}.production-today-panel,.production-calendar-panel,.production-needs-panel{margin-bottom:18px}.production-today-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}.production-today-card{border:1px solid var(--border);border-radius:14px;padding:13px;background:#fff;display:grid;gap:7px}.production-today-card.overdue{border-left:4px solid var(--danger)}.production-today-card.today{border-left:4px solid #d49a3d}.production-today-card strong,.production-today-card small{display:block}.production-today-card small{color:var(--muted);line-height:1.4}.production-today-card .production-mini-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:3px}.production-week{display:grid;grid-template-columns:repeat(7,minmax(110px,1fr));gap:8px;overflow-x:auto;padding-bottom:4px}.production-day{min-height:110px;padding:10px;border:1px solid var(--border);border-radius:13px;background:var(--surface-soft)}.production-day.today{box-shadow:inset 0 0 0 2px rgba(122,62,82,.23);background:#fff}.production-day>strong,.production-day>span{display:block}.production-day>span{font-size:11px;color:var(--muted);margin-top:2px}.production-day-jobs{display:grid;gap:5px;margin-top:8px}.production-day-job{padding:6px 7px;background:#fff;border:1px solid var(--border);border-radius:9px;font-size:11px;line-height:1.3}.production-status-pill{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:800;background:#f3edf0}.production-status-pill.preparando{background:#fff4dd;color:#8a641f}.production-status-pill.fabricando{background:#e9f0ff;color:#315d9b}.production-status-pill.terminado{background:#eaf7ef;color:#24734a}.production-status-pill.entregado{background:#edf7f3;color:#257a50}.production-status-pill.sin-planificar{background:#f2f2f2;color:#666}.production-material-ok{color:#257a50;font-weight:800}.production-material-short{color:#b04747;font-weight:800}.production-material-warning{color:#9a6a27;font-weight:800}.production-requirements-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin:16px 0 8px}.production-requirements-head small{color:var(--muted);text-align:right;max-width:360px}.production-requirements{display:grid;gap:8px;margin-bottom:16px}.production-requirement{display:grid;grid-template-columns:1.4fr repeat(3,minmax(90px,.7fr));gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface-soft)}.production-requirement>div strong,.production-requirement>div small{display:block}.production-requirement>div small{color:var(--muted);font-size:11px;margin-top:2px}.production-requirement.short{border-left:4px solid var(--danger);background:#fff8f8}.production-requirement .req-number{text-align:right}.production-requirement .req-number span{display:block;font-size:10px;color:var(--muted);text-transform:uppercase}.production-actions{display:flex;gap:6px;flex-wrap:wrap}.action-btn.production{background:#f5edf4;color:#7a3e72}.action-btn.production-next{background:#eaf4ff;color:#315d9b}.action-btn.production-done{background:#eaf7ef;color:#257a50}.production-materials-note{font-size:11px;color:var(--muted)}
 @media(max-width:760px){.production-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.production-week{grid-template-columns:repeat(7,128px);margin-right:-12px;padding-right:12px}.production-today-list{grid-template-columns:1fr}.production-requirements-head{align-items:flex-start;flex-direction:column}.production-requirements-head small{text-align:left}.production-requirement{grid-template-columns:1fr 1fr;gap:8px}.production-requirement>div:first-child{grid-column:1/-1}.production-requirement .req-number{text-align:left}.production-filter-bar{grid-template-columns:1fr 1fr}.production-filter-bar label:nth-child(3){grid-column:1/-1}}
@@ -345,3 +345,47 @@ body{min-height:100dvh}
   .sidebar{overflow:hidden}
   .sidebar .nav{-webkit-overflow-scrolling:touch}
 }
+
+
+/* ===== Revisión Caja: nómina disponible + cuentas por pagar ===== */
+.employee-pay-panel,.accounts-payable-panel{margin-bottom:18px}
+.employee-pay-result{padding:0 16px 16px}
+.employee-pay-available{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px;border:1px solid var(--border);border-radius:14px;background:var(--soft)}
+.employee-pay-available span{color:var(--muted);font-weight:600}
+.employee-pay-available strong{font-size:24px;color:#257a50}
+.employee-pay-breakdown{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}
+.employee-pay-breakdown>div{padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:#fff}
+.employee-pay-breakdown span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.employee-pay-breakdown strong{display:block;margin-top:4px}
+.employee-pay-result>small{display:block;margin-top:8px;color:var(--muted)}
+.accounts-payable-kpis{padding:0 16px 16px}
+.payable-status{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#eee;color:#555}
+.payable-status.paid{background:#e5f5ec;color:#257a50}.payable-status.overdue{background:#fbe8e8;color:#a33}.payable-status.due{background:#fff1d6;color:#8b5b00}.payable-status.pending{background:#eef1f5;color:#53606d}
+@media(max-width:760px){.employee-pay-breakdown{grid-template-columns:1fr 1fr}.employee-pay-panel .panel-header,.accounts-payable-panel .panel-header{align-items:stretch}.employee-pay-panel .primary-btn,.accounts-payable-panel .primary-btn{width:100%}.accounts-payable-kpis{padding:0 12px 14px}}
+
+
+/* Caja: cuentas por cobrar y ajustes manuales */
+.accounts-receivable-panel,.cash-adjustments-panel{margin-bottom:18px}
+.accounts-receivable-kpis{padding:0 16px 16px;grid-template-columns:repeat(3,minmax(0,1fr))}
+.cash-adjustments-panel .table-wrap,.accounts-receivable-panel .table-wrap{max-width:100%}
+@media(max-width:760px){
+  .accounts-receivable-panel .panel-header,.cash-adjustments-panel .panel-header{align-items:stretch}
+  .accounts-receivable-panel .primary-btn,.cash-adjustments-panel .primary-btn{width:100%}
+  .accounts-receivable-kpis{padding:0 12px 14px;grid-template-columns:1fr 1fr}
+  .accounts-receivable-kpis>div:last-child{grid-column:1/-1}
+}
+
+/* Caja: acciones apiladas y formularios dentro de la pantalla */
+.cash-actions-panel{margin-bottom:18px}
+.cash-action-buttons{display:grid;grid-template-columns:1fr;gap:10px;max-width:520px;padding:0 16px 16px}
+.cash-action-btn{width:100%;justify-content:flex-start;text-align:left}
+.cash-action-workspace{padding:0 16px 16px}
+.cash-inline-panel{border-top:1px solid var(--border);padding-top:16px}
+.cash-inline-panel[hidden]{display:none!important}
+.cash-inline-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.cash-inline-heading h4{margin:0 0 4px;font-size:1rem}
+.cash-inline-heading p{margin:0;color:var(--muted);font-size:.9rem}
+.cash-inline-panel form{display:grid;gap:12px}
+.cash-movements-panel{transition:box-shadow .2s ease,border-color .2s ease}
+.cash-movements-panel.cash-movement-updated{box-shadow:0 0 0 3px rgba(122,62,82,.14);border-color:#b76b83}
+@media(max-width:760px){.cash-action-buttons,.cash-action-workspace{padding-left:12px;padding-right:12px}.cash-action-buttons{max-width:none}.cash-inline-heading{flex-direction:column}.cash-inline-heading .small-btn{width:100%}}
