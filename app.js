@@ -295,6 +295,101 @@ function saleReversalSummary(sale){
   plan.lines.forEach(x=>{const key=x.saleItemId||x.productName,row=byProduct.get(key)||{name:x.productName,qty:x.productQuantity,materials:[]};row.materials.push(`${x.materialName}: ${formatQty(x.quantity)} ${x.unit}`);byProduct.set(key,row)});
   return [...byProduct.values()].map(x=>`${x.name} × ${formatQty(x.qty)}\n  ${x.materials.join('\n  ')}`).join('\n');
 }
+
+function archivedOrderPaymentNote(order,originalKind,extra=''){
+  const customer=getCustomer(order?.customerId)?.name||order?.customerName||'Cliente';
+  const products=orderProductsText(order)||'Pedido';
+  const ref=String(order?.id||'').slice(0,8);
+  return [`Pedido eliminado ${ref?`#${ref}`:''}`,customer,products,originalKind?`Movimiento original: ${originalKind}`:'',extra].filter(Boolean).join(' · ');
+}
+function paymentsRelatedToOrderDeletion(order,sale){
+  return state.payments.filter(p=>p.orderId===order?.id||(sale&&p.saleId===sale.id));
+}
+function orderDeletionRefundRows(order,sale,relevantPayments){
+  const net=Math.max(0,relevantPayments.reduce((sum,p)=>sum+num(p.amount),0));
+  if(net<=0.009)return [];
+  const methodBalance=new Map();
+  relevantPayments.forEach(p=>{const method=p.method||'Otro';methodBalance.set(method,(methodBalance.get(method)||0)+num(p.amount))});
+  let remaining=net,rows=[];
+  [...methodBalance.entries()].filter(([,amount])=>amount>0.009).sort((a,b)=>b[1]-a[1]).forEach(([method,amount])=>{
+    if(remaining<=0.009)return;
+    const refund=Math.min(remaining,amount);
+    rows.push({id:crypto.randomUUID(),orderId:null,saleId:null,date:todayISO(),amount:-refund,method:PAYMENT_METHODS.includes(method)?method:'Otro',kind:'Devolución por eliminación',note:archivedOrderPaymentNote(order,'',`Reembolso registrado al eliminar el pedido${sale?' y su venta':''}`)});
+    remaining-=refund;
+  });
+  if(remaining>0.009){
+    rows.push({id:crypto.randomUUID(),orderId:null,saleId:null,date:todayISO(),amount:-remaining,method:'Otro',kind:'Devolución por eliminación',note:archivedOrderPaymentNote(order,'','Reembolso registrado al eliminar el pedido')});
+  }
+  return rows;
+}
+function orderDeletionPreview(order,sale,plan,relevantPayments){
+  const paid=Math.max(0,relevantPayments.reduce((sum,p)=>sum+num(p.amount),0));
+  const lines=[`¿Eliminar definitivamente este pedido?`,``,`Cliente: ${getCustomer(order.customerId)?.name||order.customerName||'Cliente'}`,`Productos: ${orderProductsText(order)||'Pedido'}`];
+  if(sale){
+    lines.push('',`La venta asociada también será eliminada.`);
+    if(plan?.combined?.length){
+      lines.push('Materiales que volverán al inventario:');
+      plan.combined.forEach(x=>lines.push(`• ${x.materialName||getMaterial(x.materialId)?.name||'Material'}: ${formatQty(x.quantity)} ${x.unit||getMaterial(x.materialId)?.unit||''}`));
+    }
+  }
+  const job=productionJobForOrder(order.id);
+  if(job)lines.push('',`Se eliminará el plan de producción y se liberarán sus reservas de materiales.`);
+  if(paid>0.009)lines.push('',`Dinero recibido pendiente por devolver: ${COP.format(paid)}.`,`La app registrará el reembolso en Caja. Debes realizar la devolución real al cliente por el medio correspondiente.`);
+  else if(relevantPayments.length)lines.push('',`Los pagos/devoluciones históricos quedarán archivados en Caja con saldo neto ${COP.format(0)}.`);
+  lines.push('',`Esta acción no se puede deshacer.`);
+  return lines.join('\n');
+}
+function deleteOrderWithFullRollback(orderId){
+  const order=getOrder(orderId);if(!order)return;
+  const sale=order.saleId?state.sales.find(s=>s.id===order.saleId):state.sales.find(s=>s.orderId===order.id);
+  if(order.saleId&&!sale){
+    alert('Este pedido figura como vendido, pero no se encontró la venta asociada. No se eliminará para evitar perder el control de materiales o dinero.');
+    return;
+  }
+  const plan=sale?saleReversalPlan(sale):{lines:[],combined:[]};
+  if(sale&&!plan.combined.length){
+    alert('No se puede eliminar este pedido de forma segura porque la venta asociada no tiene materiales registrados para devolver. Revisa primero el detalle de la venta.');
+    return;
+  }
+  const missingMaterials=sale?plan.combined.filter(x=>!getMaterial(x.materialId)):[];
+  if(missingMaterials.length){
+    alert('No se puede eliminar este pedido porque faltan materiales del historial de la venta y no sería posible devolver todo al inventario. Materiales faltantes: '+missingMaterials.map(x=>x.materialName||x.materialId).join(', '));
+    return;
+  }
+  const relevantPayments=paymentsRelatedToOrderDeletion(order,sale);
+  if(!confirm(orderDeletionPreview(order,sale,plan,relevantPayments)))return;
+
+  // 1) Si llegó a venta, devolver exactamente los materiales registrados en esa venta.
+  if(sale){
+    restore(plan.combined);
+    plan.lines.forEach(u=>recordInventoryMovement({materialId:u.materialId,kind:'sale_reversal',quantity:u.quantity,date:todayISO(),note:`Pedido eliminado · devolución de material: ${u.productName} × ${formatQty(u.productQuantity)}`,sourceType:'order_delete_reversal',sourceId:order.id,unitCost:u.unitCost}));
+    state.sales=state.sales.filter(s=>s.id!==sale.id);
+  }
+
+  // 2) Liberar reservas/planes de producción; las reservas no habían reducido stock físico.
+  const jobIds=state.productionJobs.filter(j=>j.orderId===order.id).map(j=>j.id);
+  state.productionReservations=state.productionReservations.filter(r=>r.orderId!==order.id&&!jobIds.includes(r.productionJobId));
+  state.productionJobs=state.productionJobs.filter(j=>j.orderId!==order.id);
+
+  // 3) Conservar trazabilidad financiera en Caja. Se archivan los movimientos originales
+  //    sin FK al pedido y se agrega la devolución necesaria para que el saldo quede en cero.
+  const refundRows=orderDeletionRefundRows(order,sale,relevantPayments);
+  relevantPayments.forEach(p=>{
+    const originalKind=p.kind|| (num(p.amount)<0?'Devolución':'Pago');
+    p.orderId=null;p.saleId=null;
+    p.kind=num(p.amount)<0?'Devolución archivada':'Pago archivado';
+    p.note=archivedOrderPaymentNote(order,originalKind,p.note||'');
+  });
+  state.payments.push(...refundRows);
+
+  // 4) Eliminar finalmente el pedido. El historial de inventario/caja queda conservado.
+  state.orders=state.orders.filter(o=>o.id!==order.id);
+  save();renderAll();
+  const returned=plan.combined.length?` Se devolvieron ${plan.combined.length} material(es) al inventario.`:'';
+  const refunded=refundRows.length?` Se registró una devolución total de ${COP.format(Math.abs(refundRows.reduce((s,p)=>s+num(p.amount),0)))} en Caja.`:'';
+  alert(`Pedido eliminado correctamente.${returned}${refunded}`);
+}
+
 function openSaleDetail(id){
   const s=state.sales.find(x=>x.id===id);if(!s)return;
   const items=normalizedSaleItems(s),o=s.orderId?getOrder(s.orderId):null,customer=getCustomer(s.customerId)?.name||s.customerName||o?.customerName||'Cliente';
@@ -409,7 +504,7 @@ function convertOrderToSale(id){
 
 function backupPayload(){
   return {
-    app:'M&N Gift', version:'V.MN.0.0.006', phase:2, currency:'COP', exportedAt:new Date().toISOString(),
+    app:'M&N Gift', version:'V.MN.0.0.007', phase:2, currency:'COP', exportedAt:new Date().toISOString(),
     data:{
       materials:state.materials, products:state.products, sales:state.sales, purchases:state.purchases,
       expenses:state.expenses, customers:state.customers, orders:state.orders, payments:state.payments, cashClosures:state.cashClosures, suppliers:state.suppliers, inventoryMovements:state.inventoryMovements, productionJobs:state.productionJobs, productionReservations:state.productionReservations, customCategories:state.customCategories
@@ -597,7 +692,7 @@ ${summary}`;if(confirm(msg)){restore(plan.combined);plan.lines.forEach(u=>record
   if(t.dataset.editCustomer)return openCustomerEdit(t.dataset.editCustomer);
   if(t.dataset.deleteCustomer){if(!requireBusinessAdmin())return;const id=t.dataset.deleteCustomer;if(state.orders.some(o=>o.customerId===id)){alert('No puedes eliminar este cliente porque tiene pedidos registrados. Puedes editar sus datos en su lugar.');return}if(confirm('¿Eliminar este cliente?')){state.customers=state.customers.filter(c=>c.id!==id);save();renderAll()}return;}
   if(t.dataset.editOrder)return openOrderEdit(t.dataset.editOrder);
-  if(t.dataset.deleteOrder){if(!requireBusinessAdmin())return;const o=getOrder(t.dataset.deleteOrder);if(paymentsForOrder(o?.id).length){alert('Este pedido tiene movimientos de dinero registrados (pagos o devoluciones). Para conservar el historial financiero no se puede eliminar.');return}if(o?.saleId){alert('Este pedido ya fue convertido en venta. Revierte primero la venta asociada.');return}if(confirm('¿Eliminar este pedido?')){state.orders=state.orders.filter(o=>o.id!==t.dataset.deleteOrder);save();renderAll()}return;}
+  if(t.dataset.deleteOrder){if(!requireBusinessAdmin())return;deleteOrderWithFullRollback(t.dataset.deleteOrder);return;}
   if(t.dataset.editExpense){if(!requireBusinessAdmin())return;return openExpenseEdit(t.dataset.editExpense);}
   if(t.dataset.deleteExpense){if(!requireBusinessAdmin())return;if(confirm('¿Eliminar este gasto?')){state.expenses=state.expenses.filter(x=>x.id!==t.dataset.deleteExpense);save();renderAll()}return;}
 });
@@ -605,7 +700,7 @@ ${summary}`;if(confirm(msg)){restore(plan.combined);plan.lines.forEach(u=>record
 
 
 // ============================================================
-// BLOQUE FINANCIERO AVANZADO — desarrollo sobre V.MN.0.0.006
+// BLOQUE FINANCIERO AVANZADO — desarrollo sobre V.MN.0.0.007
 // ============================================================
 function openPaymentModal(orderId){const o=getOrder(orderId);if(!o||o.saleId||o.status==='Cancelado')return;const balance=orderBalance(o);if(balance<=0){alert('Este pedido ya está completamente pagado.');return}const f=document.getElementById('paymentForm');f.reset();f.elements.orderId.value=o.id;f.elements.date.value=todayISO();f.elements.method.value='Efectivo';f.elements.amount.value=Math.round(balance);document.getElementById('paymentOrderTarget').innerHTML=`${escapeHtml(getCustomer(o.customerId)?.name||o.customerName||'Cliente')} · Saldo actual: <strong>${COP.format(balance)}</strong>`;updatePaymentPreview();openModal('paymentModal')}
 function updatePaymentPreview(){const f=document.getElementById('paymentForm');if(!f)return;const o=getOrder(f.elements.orderId.value),amount=num(f.elements.amount.value),balance=orderBalance(o);document.getElementById('paymentPreview').innerHTML=`Saldo actual: <strong>${COP.format(balance)}</strong> · Después del abono: <strong>${COP.format(Math.max(0,balance-amount))}</strong>`}
@@ -622,6 +717,7 @@ function allCashMovements(){
     let detail='Movimiento de dinero';
     if(o){const customer=c?.name||o.customerName||'Cliente',products=orderProductsText(o);detail=`${p.kind|| (amount>0?'Pago':'Devolución')} · ${customer}${products?` · ${products}`:''}`}
     else if(s){const items=normalizedSaleItems(s).map(i=>`${i.productName||'Producto'} × ${formatQty(i.quantity)}`).join(' · ');detail=`${p.kind||'Venta'}${items?` · ${items}`:''}`}
+    else if(p.kind)detail=p.kind;
     if(p.note)detail+=` · ${p.note}`;
     rows.push({id:`payment-${p.id}`,date:p.date||todayISO(),type:amount>0?'Ingreso':'Egreso',category:p.kind|| (amount>0?'Cobro':'Devolución'),detail,method:p.method||'Otro',income:amount>0?amount:0,out:amount<0?Math.abs(amount):0,sequence:sequence++});
   });
@@ -696,7 +792,7 @@ if(document.getElementById('cashCloseDate'))document.getElementById('cashCloseDa
 
 
 // ============================================================
-// BLOQUE PRODUCCIÓN Y PLANIFICACIÓN — desarrollo V.MN.0.0.006
+// BLOQUE PRODUCCIÓN Y PLANIFICACIÓN — desarrollo V.MN.0.0.007
 // ============================================================
 function getProductionJob(id){return state.productionJobs.find(j=>j.id===id)}
 function productionJobForOrder(orderId){return state.productionJobs.find(j=>j.orderId===orderId)}
@@ -775,7 +871,16 @@ function setProductionStatus(job,next){
 function cancelProductionPlan(jobId){const job=getProductionJob(jobId);if(!job||!requireBusinessAdmin())return;if(['Fabricando','Terminado','Entregado'].includes(job.status)){alert('Este plan ya avanzó a fabricación. No se puede cancelar desde aquí; ajusta primero el pedido y el inventario si corresponde.');return}if(!confirm('¿Cancelar este plan de producción? Los materiales reservados volverán a quedar libres.'))return;job.status='Cancelado';job.updatedAt=new Date().toISOString();save();renderAll()}
 function productionAlerts(){const allocation=productionAllocation(),alerts=[];state.productionJobs.filter(j=>productionJobIsActive(j)).forEach(j=>{const o=getOrder(j.orderId),label=orderProductsText(o)||'Pedido',sum=productionJobSummary(j,allocation),date=j.scheduledDate||o?.deliveryDate;if(orderProductsWithoutRecipe(o).length||!productionReservationsForJob(j.id).length)alerts.push({level:'critical',icon:'🧰',title:`Producción sin receta · ${label}`,detail:'El producto no tiene materiales reservados. Revisa su receta antes de fabricar.',section:'production'});else if(sum.shortages.length)alerts.push({level:'critical',icon:'🧰',title:`Producción con faltantes · ${label}`,detail:`${sum.shortages.length} material(es) no alcanzan para la reserva.`,section:'production'});if(date&&date<=todayISO()&&!['Terminado'].includes(j.status))alerts.push({level:date<todayISO()?'critical':'warning',icon:'🛠️',title:date<todayISO()?'Producción atrasada':'Producción programada para hoy',detail:`${label} · ${j.status}.`,section:'production'})});const unplanned=state.orders.filter(o=>o.status!=='Cancelado'&&!o.saleId&&!productionJobForOrder(o.id)&&dayDifference(o.deliveryDate)!==null&&dayDifference(o.deliveryDate)<=2);if(unplanned.length)alerts.push({level:'warning',icon:'📋',title:`${unplanned.length} pedido(s) próximos sin planificar`,detail:'Tienen entrega en los próximos 2 días y todavía no reservan materiales.',section:'production'});return alerts}
 const businessAlertsBeforeProduction=businessAlerts;businessAlerts=function(){const all=[...businessAlertsBeforeProduction(),...productionAlerts()],weight={critical:0,warning:1,info:2};return all.sort((a,b)=>weight[a.level]-weight[b.level])};
-const orderActionsBeforeProduction=orderActions;orderActions=function(o){if(o.saleId)return `<div class="row-actions"><span class="action-state">✓ Venta creada</span></div>`;const payBtn=o.status!=='Cancelado'&&orderBalance(o)>0?`<button type="button" class="action-btn payment" data-pay-order="${o.id}">+ Abono</button>`:'',prodBtn=o.status!=='Cancelado'?`<button type="button" class="action-btn production" data-plan-production="${o.id}">Producción</button>`:'',refundBtn=canRefundCancelledOrder(o)?`<button type="button" class="action-btn refund" data-refund-order="${o.id}">↩ Devolver dinero</button>`:(o.status==='Cancelado'&&refundedAmountForOrder(o)>0?`<span class="action-state">✓ Dinero devuelto</span>`:'');if(!isBusinessAdmin())return `<div class="row-actions">${prodBtn}${payBtn}${refundBtn}${o.status!=='Cancelado'?`<button type="button" class="action-btn convert" data-convert-order="${o.id}">Pasar a venta</button>`:''}<button type="button" class="action-btn edit" data-edit-order="${o.id}">Editar</button></div>`;return `<div class="row-actions">${prodBtn}${payBtn}${refundBtn}${o.status!=='Cancelado'?`<button type="button" class="action-btn convert" data-convert-order="${o.id}">Pasar a venta</button>`:''}<button type="button" class="action-btn edit" data-edit-order="${o.id}">Editar</button><button type="button" class="action-btn delete" data-delete-order="${o.id}">Eliminar</button></div>`};
+const orderActionsBeforeProduction=orderActions;
+orderActions=function(o){
+  const deleteBtn=isBusinessAdmin()?`<button type="button" class="action-btn delete" data-delete-order="${o.id}">Eliminar</button>`:'';
+  if(o.saleId)return `<div class="row-actions"><span class="action-state">✓ Venta creada</span>${deleteBtn}</div>`;
+  const payBtn=o.status!=='Cancelado'&&orderBalance(o)>0?`<button type="button" class="action-btn payment" data-pay-order="${o.id}">+ Abono</button>`:'';
+  const prodBtn=o.status!=='Cancelado'?`<button type="button" class="action-btn production" data-plan-production="${o.id}">Producción</button>`:'';
+  const refundBtn=canRefundCancelledOrder(o)?`<button type="button" class="action-btn refund" data-refund-order="${o.id}">↩ Devolver dinero</button>`:(o.status==='Cancelado'&&refundedAmountForOrder(o)>0?`<span class="action-state">✓ Dinero devuelto</span>`:'');
+  if(!isBusinessAdmin())return `<div class="row-actions">${prodBtn}${payBtn}${refundBtn}${o.status!=='Cancelado'?`<button type="button" class="action-btn convert" data-convert-order="${o.id}">Pasar a venta</button>`:''}<button type="button" class="action-btn edit" data-edit-order="${o.id}">Editar</button></div>`;
+  return `<div class="row-actions">${prodBtn}${payBtn}${refundBtn}${o.status!=='Cancelado'?`<button type="button" class="action-btn convert" data-convert-order="${o.id}">Pasar a venta</button>`:''}<button type="button" class="action-btn edit" data-edit-order="${o.id}">Editar</button>${deleteBtn}</div>`;
+};
 const convertOrderToSaleBeforeProduction=convertOrderToSale;convertOrderToSale=function(id){const o=getOrder(id),before=o?.saleId;convertOrderToSaleBeforeProduction(id);if(o&&!before&&o.saleId){const job=productionJobForOrder(id);if(job){job.status='Entregado';job.updatedAt=new Date().toISOString();job.completedAt=new Date().toISOString();save();renderAll()}}};
 
 // Protege pedidos que ya están en fabricación/terminados y conserva la reserva si se edita un pedido temprano.
@@ -788,7 +893,8 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-delete-sal
 document.addEventListener('click',e=>{const t=e.target.closest('[data-delete-sale]');if(t?.dataset.productionOrderId){const job=productionJobForOrder(t.dataset.productionOrderId);if(job&&!state.sales.some(s=>s.orderId===t.dataset.productionOrderId)){job.status='Terminado';job.updatedAt=new Date().toISOString();save();renderAll()}delete t.dataset.productionOrderId}},false);
 
 // Impide borrar un pedido con un plan activo desde el manejador anterior.
-document.addEventListener('click',e=>{const t=e.target.closest('[data-delete-order]');if(!t)return;const job=productionJobForOrder(t.dataset.deleteOrder);if(job&&productionJobIsActive(job)){e.preventDefault();e.stopImmediatePropagation();alert('Este pedido tiene un plan de producción activo. Cancela primero el plan desde Producción.')}},true);
+// La eliminación completa de un pedido también libera su plan y reservas de producción.
+// No se bloquea aquí: deleteOrderWithFullRollback() se encarga de revertir todo de forma controlada.
 
 document.getElementById('productionForm')?.addEventListener('submit',e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.currentTarget)),o=getOrder(d.orderId);if(!o)return;let job=productionJobForOrder(o.id);if(!job){job={id:crypto.randomUUID(),orderId:o.id,scheduledDate:d.scheduledDate,status:'Pendiente',notes:d.notes?.trim()||'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};state.productionJobs.push(job);replaceProductionReservations(job,o)}else{job.scheduledDate=d.scheduledDate;job.notes=d.notes?.trim()||'';if(['Pendiente','Preparando'].includes(job.status))replaceProductionReservations(job,o)}const desired=d.status||job.status;if(['Fabricando','Terminado'].includes(desired)){const sum=productionJobSummary(job),missingRecipes=orderProductsWithoutRecipe(o);if(missingRecipes.length||!productionReservationsForJob(job.id).length||sum.shortages.length){alert('No se puede guardar ese estado: faltan materiales o el producto no tiene receta. El plan quedó guardado como Pendiente/Preparando.');job.status=['Preparando'].includes(job.status)?'Preparando':'Pendiente';save();renderAll();return}}job.status=desired;if(desired==='Preparando'||desired==='Fabricando')o.status='En elaboración';if(desired==='Terminado')o.status='Listo';job.updatedAt=new Date().toISOString();save();renderAll();closeModal('productionModal')});
 document.getElementById('productionScheduledDate')?.addEventListener('change',()=>{const id=document.getElementById('productionForm')?.elements.orderId.value;if(id)renderProductionRequirementsPreview(id)});
